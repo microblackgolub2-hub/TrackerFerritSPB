@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет произведенных деталей</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --evening: #d97706;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+            color: var(--primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #64748b;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .btn-warning {
+            background-color: #d97706;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #b45309;
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+            width: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            background-color: #f8fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-day { background-color: #dbeafe; color: #1e40af; }
+        .badge-evening { background-color: #fef3c7; color: #92400e; }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: #e2e8f0;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .quick-btn:hover {
+            background: #cbd5e1;
+        }
+
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .cal-header {
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding-bottom: 4px;
+        }
+        .cal-day {
+            min-height: 54px;
+            height: 54px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            background: #f8fafc;
+            user-select: none;
+            overflow: hidden;
+            box-sizing: border-box;
+            transition: all 0.1s;
+        }
+        .cal-day:hover {
+            border-color: var(--primary);
+        }
+        .cal-day.day-shift {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1e40af;
+            font-weight: bold;
+        }
+        .cal-day.evening-shift {
+            background: #fef3c7;
+            border-color: #fde68a;
+            color: #92400e;
+            font-weight: bold;
+        }
+        .cal-day .day-num {
+            font-size: 0.9rem;
+            line-height: 1.1;
+        }
+        .cal-day .shift-lbl {
+            font-size: 0.6rem;
+            opacity: 0.85;
+            line-height: 1;
+            margin-top: 2px;
+        }
+        .cal-day.empty {
+            border: none;
+            background: transparent;
+            cursor: default;
+            min-height: 54px;
+            height: 54px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Учет произведенных деталей</h1>
+        <p style="color: var(--text-muted); margin: 0;">Точный график смен и автоматический расчет плана</p>
+    </header>
+
+    <!-- Панель управления нормами и календарем -->
+    <div class="card" style="padding: 15px 20px; background: #eff6ff; border-color: #bfdbfe;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <strong>Норма смен:</strong> День = <span id="dayNormView">220</span> | Вечер = <span id="eveningNormView">200</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="openCalendarModal()">📅 График смен месяца</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleSettings()">⚙️ Настройки</button>
+            </div>
+        </div>
+        <div id="settingsPanel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bfdbfe;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: flex-end;">
+                <div>
+                    <label style="font-size: 0.8rem;">Норма день:</label>
+                    <input type="number" id="inputDayNorm" value="220" style="padding: 6px;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem;">Норма вечер:</label>
+                    <input type="number" id="inputEveningNorm" value="200" style="padding: 6px;">
+                </div>
+                <button class="btn btn-sm" onclick="saveSettings()" style="height: 38px;">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика месяца -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>План на месяц</h3>
+            <div class="stat-value" id="monthPlan">0 шт</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="planDaysInfo">0 смен назначено</span>
+        </div>
+        <div class="stat-card">
+            <h3>Сделано за месяц</h3>
+            <div class="stat-value" id="monthTotal" style="color: var(--primary);">0 шт</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="monthPercent">0% от плана</span>
+        </div>
+        <div class="stat-card">
+            <h3>Осталось сделать</h3>
+            <div class="stat-value" id="monthLeft" style="color: var(--warning);">0 шт</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="daysLeftInfo">0 смен до конца</span>
+        </div>
+    </div>
+
+    <!-- Форма добавления / редактирования -->
+    <div class="card" id="formCard">
+        <h2 id="formTitle" style="margin-top: 0; font-size: 1.2rem;">Добавить запись</h2>
+        <form id="recordForm">
+            <input type="hidden" id="editRecordId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="date">Дата</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="shiftType">Смена</label>
+                    <select id="shiftType">
+                        <option value="day">День</option>
+                        <option value="evening">Вечер</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mainNumber">Табельный номер (6 цифр)</label>
+                    <input type="text" id="mainNumber" placeholder="Напр: 664352" maxlength="6" required>
+                </div>
+                <div class="form-group">
+                    <label for="subNumber">Второй номер (через слэш)</label>
+                    <input type="text" id="subNumber" placeholder="Напр: 558.25.1.11" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="quantity">Количество деталей</label>
+                    <input type="number" id="quantity" placeholder="Введите количество" min="1" required>
+                    <div class="quick-btns">
+                        <button type="button" class="quick-btn" onclick="setQty(100)">+100</button>
+                        <button type="button" class="quick-btn" onclick="setQty(200)">+200</button>
+                        <button type="button" class="quick-btn" onclick="setQty(220)">Норма дня (220)</button>
+                        <button type="button" class="quick-btn" onclick="setQty(200)">Норма вечера (200)</button>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn" id="submitBtn">Добавить в учет</button>
+                <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display: none;" onclick="cancelEdit()">Отмена</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Таблица записей и поиск -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0; font-size: 1.2rem;">История записей</h2>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="searchInput" placeholder="🔍 Поиск по номерам..." oninput="render()" style="padding: 6px 12px; font-size: 0.85rem; width: 180px;">
+                <select id="filterMonth" onchange="render()" style="padding: 6px; font-size: 0.85rem; width: auto;">
+                    <!-- Заполняется динамически -->
+                </select>
+                <span id="recordCount" style="color: var(--text-muted); font-size: 0.875rem;"></span>
+            </div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table id="recordsTable">
+                <thead>
+                    <tr>
+                        <th>Дата / Смена</th>
+                        <th>Табельный номер</th>
+                        <th>Второй номер</th>
+                        <th>Кол-во</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsList">
+                    <!-- Записи добавляются динамически -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions-bar">
+            <button class="btn btn-secondary" onclick="exportData()">Экспорт в файл</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Импорт из файла</button>
+            <input type="file" id="importFile" style="display: none;" onchange="importData(event)">
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно календаря для назначения смен -->
+<div id="calendarModal" class="modal">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 1.1rem;">График смен месяца</h3>
+            <button class="btn btn-secondary btn-sm" onclick="closeCalendarModal()">✕</button>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">Кликайте по дню, чтобы выбрать тип смены (День / Вечер / Выходной).</p>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <button class="btn btn-secondary btn-sm" onclick="changeCalendarMonth(-1)">◀ Месяц</button>
+            <span id="calMonthName" style="font-weight: 600;"></span>
+            <button class="btn btn-secondary btn-sm" onclick="changeCalendarMonth(1)">Месяц ▶</button>
+        </div>
+
+        <div class="cal-grid">
+            <div class="cal-header">Пн</div>
+            <div class="cal-header">Вт</div>
+            <div class="cal-header">Ср</div>
+            <div class="cal-header">Чт</div>
+            <div class="cal-header">Пт</div>
+            <div class="cal-header" style="color: var(--danger);">Сб</div>
+            <div class="cal-header" style="color: var(--danger);">Вс</div>
+        </div>
+        <div id="calDaysGrid" class="cal-grid" style="margin-top: 4px;"></div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="fillWeekShifts()">Неделя День / Вечер</button>
+            <button class="btn" style="flex: 1; padding: 8px;" onclick="closeCalendarModal()">Готово</button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно выбора смены для конкретного дня -->
+<div id="shiftSelectModal" class="modal">
+    <div class="modal-content" style="max-width: 320px; text-align: center;">
+        <h3 id="selectedDateTitle" style="margin-top: 0; font-size: 1.1rem;">Выбор смены</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Какая смена была в этот день?</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+            <button class="btn" style="background-color: #2563eb;" onclick="setDayShiftModal('day')">☀️ Дневная смена (Норма: <span id="modalDayNormVal">220</span>)</button>
+            <button class="btn" style="background-color: #d97706;" onclick="setDayShiftModal('evening')">🌙 Вечерняя смена (Норма: <span id="modalEveningNormVal">200</span>)</button>
+            <button class="btn btn-danger" onclick="setDayShiftModal('off')">❌ Выходной / Снять смену</button>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="margin-top: 15px; width: 100%;" onclick="closeShiftSelectModal()">Отмена</button>
+    </div>
+</div>
+
+<script>
+    let records = JSON.parse(localStorage.getItem('production_records')) || [];
+    let settings = JSON.parse(localStorage.getItem('production_settings')) || { dayNorm: 220, eveningNorm: 200 };
+    let shiftSchedule = JSON.parse(localStorage.getItem('production_shift_schedule')) || {};
+
+    let currentCalDate = new Date();
+    let activeDateStrForModal = '';
+
+    document.getElementById('inputDayNorm').value = settings.dayNorm;
+    document.getElementById('inputEveningNorm').value = settings.eveningNorm;
+    document.getElementById('dayNormView').innerText = settings.dayNorm;
+    document.getElementById('eveningNormView').innerText = settings.eveningNorm;
+
+    document.getElementById('date').valueAsDate = new Date();
+
+    document.getElementById('shiftType').addEventListener('change', function() {
+        const qtyInput = document.getElementById('quantity');
+        if (!document.getElementById('editRecordId').value) {
+            if (this.value === 'day') {
+                qtyInput.value = settings.dayNorm;
+            } else {
+                qtyInput.value = settings.eveningNorm;
+            }
+        }
+    });
+
+    document.getElementById('quantity').value = settings.dayNorm;
+
+    function setQty(val) {
+        document.getElementById('quantity').value = val;
+    }
+
+    function toggleSettings() {
+        const panel = document.getElementById('settingsPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function saveSettings() {
+        settings.dayNorm = parseInt(document.getElementById('inputDayNorm').value) || 220;
+        settings.eveningNorm = parseInt(document.getElementById('inputEveningNorm').value) || 200;
+        localStorage.setItem('production_settings', JSON.stringify(settings));
+        
+        document.getElementById('dayNormView').innerText = settings.dayNorm;
+        document.getElementById('eveningNormView').innerText = settings.eveningNorm;
+        toggleSettings();
+        render();
+    }
+
+    document.getElementById('recordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const editId = document.getElementById('editRecordId').value;
+        const date = document.getElementById('date').value;
+        const shiftType = document.getElementById('shiftType').value;
+        const mainNumber = document.getElementById('mainNumber').value.trim();
+        const subNumber = document.getElementById('subNumber').value.trim();
+        const quantity = parseInt(document.getElementById('quantity').value);
+
+        if (mainNumber.length !== 6 || isNaN(mainNumber)) {
+            alert('Табельный номер должен состоять ровно из 6 цифр!');
+            return;
+        }
+
+        if (editId) {
+            const index = records.findIndex(r => r.id == editId);
+            if (index !== -1) {
+                records[index] = {
+                    ...records[index],
+                    date,
+                    shiftType,
+                    mainNumber,
+                    subNumber,
+                    quantity
+                };
+            }
+            cancelEdit();
+        } else {
+            const newRecord = {
+                id: Date.now(),
+                date,
+                shiftType,
+                mainNumber,
+                subNumber,
+                quantity
+            };
+            records.unshift(newRecord);
+            
+            if (!shiftSchedule[date]) {
+                shiftSchedule[date] = shiftType;
+                localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+            }
+
+            document.getElementById('mainNumber').value = '';
+            document.getElementById('subNumber').value = '';
+        }
+
+        saveAndRender();
+    });
+
+    function editRecord(id) {
+        const record = records.find(r => r.id === id);
+        if (!record) return;
+
+        document.getElementById('editRecordId').value = record.id;
+        document.getElementById('date').value = record.date;
+        document.getElementById('shiftType').value = record.shiftType;
+        document.getElementById('mainNumber').value = record.mainNumber;
+        document.getElementById('subNumber').value = record.subNumber;
+        document.getElementById('quantity').value = record.quantity;
+
+        document.getElementById('formTitle').innerText = 'Редактировать запись';
+        document.getElementById('submitBtn').innerText = 'Сохранить изменения';
+        document.getElementById('submitBtn').className = 'btn btn-warning';
+        document.getElementById('cancelEditBtn').style.display = 'block';
+
+        document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        document.getElementById('editRecordId').value = '';
+        document.getElementById('recordForm').reset();
+        document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('shiftType').value = 'day';
+        document.getElementById('quantity').value = settings.dayNorm;
+
+        document.getElementById('formTitle').innerText = 'Добавить запись';
+        document.getElementById('submitBtn').innerText = 'Добавить в учет';
+        document.getElementById('submitBtn').className = 'btn';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    function deleteRecord(id) {
+        if (confirm('Удалить эту запись?')) {
+            records = records.filter(r => r.id !== id);
+            saveAndRender();
+        }
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('production_records', JSON.stringify(records));
+        render();
+    }
+
+    function updateMonthFilter() {
+        const filterSelect = document.getElementById('filterMonth');
+        const monthsMap = new Set();
+        
+        records.forEach(r => {
+            if (r.date) monthsMap.add(r.date.substring(0, 7));
+        });
+        Object.keys(shiftSchedule).forEach(d => {
+            if (d) monthsMap.add(d.substring(0, 7));
+        });
+
+        const currentYM = new Date().toISOString().substring(0, 7);
+        monthsMap.add(currentYM);
+
+        const sortedMonths = Array.from(monthsMap).sort().reverse();
+        const currentSelected = filterSelect.value || currentYM;
+        filterSelect.innerHTML = '';
+        
+        sortedMonths.forEach(ym => {
+            const [year, month] = ym.split('-');
+            const dateObj = new Date(year, month - 1, 1);
+            const monthName = dateObj.toLocaleString('ru', { month: 'long', year: 'numeric' });
+            
+            const opt = document.createElement('option');
+            opt.value = ym;
+            opt.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+            if (ym === currentSelected) opt.selected = true;
+            filterSelect.appendChild(opt);
+        });
+    }
+
+    function getMonthPlanData(year, month) {
+        let totalPlan = 0;
+        let dayShiftsCount = 0;
+        let eveningShiftsCount = 0;
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const mm = String(month).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
+
+            const shift = shiftSchedule[dateStr];
+            if (shift === 'day') {
+                totalPlan += settings.dayNorm;
+                dayShiftsCount++;
+            } else if (shift === 'evening') {
+                totalPlan += settings.eveningNorm;
+                eveningShiftsCount++;
+            }
+        }
+        return { totalPlan, dayShiftsCount, eveningShiftsCount, assignedShiftsCount: dayShiftsCount + eveningShiftsCount };
+    }
+
+    function openCalendarModal() {
+        const filterYM = document.getElementById('filterMonth').value || new Date().toISOString().substring(0, 7);
+        const [y, m] = filterYM.split('-').map(Number);
+        currentCalDate = new Date(y, m - 1, 1);
+        renderCalendarModal();
+        document.getElementById('calendarModal').style.display = 'flex';
+    }
+
+    function closeCalendarModal() {
+        document.getElementById('calendarModal').style.display = 'none';
+        render();
+    }
+
+    function changeCalendarMonth(direction) {
+        currentCalDate.setMonth(currentCalDate.getMonth() + direction);
+        renderCalendarModal();
+    }
+
+    function renderCalendarModal() {
+        const year = currentCalDate.getFullYear();
+        const month = currentCalDate.getMonth();
+        
+        const monthName = currentCalDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
+        document.getElementById('calMonthName').innerText = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+        const grid = document.getElementById('calDaysGrid');
+        grid.innerHTML = '';
+
+        const jsDay = new Date(year, month, 1).getDay();
+        const firstDayIndex = (jsDay === 0) ? 6 : jsDay - 1;
+        
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'cal-day empty';
+            grid.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const mm = String(month + 1).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
+
+            const cell = document.createElement('div');
+            cell.className = 'cal-day';
+            
+            const shift = shiftSchedule[dateStr];
+            if (shift === 'day') {
+                cell.classList.add('day-shift');
+                cell.innerHTML = `<span class="day-num">${day}</span><span class="shift-lbl">День</span>`;
+            } else if (shift === 'evening') {
+                cell.classList.add('evening-shift');
+                cell.innerHTML = `<span class="day-num">${day}</span><span class="shift-lbl">Вечер</span>`;
+            } else {
+                cell.innerHTML = `<span class="day-num">${day}</span><span class="shift-lbl" style="color:var(--text-muted)">вых.</span>`;
+            }
+
+            cell.onclick = function() {
+                activeDateStrForModal = dateStr;
+                document.getElementById('selectedDateTitle').innerText = `Дата: ${dd}.${mm}.${year}`;
+                document.getElementById('modalDayNormVal').innerText = settings.dayNorm;
+                document.getElementById('modalEveningNormVal').innerText = settings.eveningNorm;
+                document.getElementById('shiftSelectModal').style.display = 'flex';
+            };
+
+            grid.appendChild(cell);
+        }
+    }
+
+    function closeShiftSelectModal() {
+        document.getElementById('shiftSelectModal').style.display = 'none';
+    }
+
+    function setDayShiftModal(type) {
+        if (type === 'off') {
+            delete shiftSchedule[activeDateStrForModal];
+        } else {
+            shiftSchedule[activeDateStrForModal] = type;
+        }
+        localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+        closeShiftSelectModal();
+        renderCalendarModal();
+        render();
+    }
+
+    function fillWeekShifts() {
+        const year = currentCalDate.getFullYear();
+        const month = currentCalDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const mm = String(month + 1).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
+            const dObj = new Date(year, month, day);
+            
+            if (dObj.getDay() !== 0 && dObj.getDay() !== 6) {
+                const weekIndex = Math.floor((day - 1) / 7);
+                shiftSchedule[dateStr] = weekIndex % 2 === 0 ? 'day' : 'evening';
+            }
+        }
+        localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+        renderCalendarModal();
+        render();
+    }
+
+    function render() {
+        updateMonthFilter();
+        const selectedYM = document.getElementById('filterMonth').value || new Date().toISOString().substring(0, 7);
+        const [selYear, selMonth] = selectedYM.split('-').map(Number);
+        const searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        const tbody = document.getElementById('recordsList');
+        tbody.innerHTML = '';
+
+        let monthTotal = 0;
+
+        const planData = getMonthPlanData(selYear, selMonth);
+        const monthPlan = planData.totalPlan;
+        const workingDaysCount = planData.assignedShiftsCount;
+
+        records.forEach(r => {
+            const rYM = r.date ? r.date.substring(0, 7) : '';
+            if (rYM === selectedYM) {
+                monthTotal += r.quantity;
+            }
+        });
+
+        const filteredRecords = records.filter(r => {
+            const matchesMonth = r.date && r.date.substring(0, 7) === selectedYM;
+            if (!matchesMonth) return false;
+
+            if (searchQuery) {
+                const mainMatch = r.mainNumber.toLowerCase().includes(searchQuery);
+                const subMatch = r.subNumber.toLowerCase().includes(searchQuery);
+                return mainMatch || subMatch;
+            }
+            return true;
+        });
+
+        filteredRecords.forEach(r => {
+            const tr = document.createElement('tr');
+            const shiftBadge = r.shiftType === 'day' 
+                ? '<span class="badge badge-day">День</span>' 
+                : '<span class="badge badge-evening">Вечер</span>';
+
+            tr.innerHTML = `
+                <td>
+                    <strong>${r.date.split('-').reverse().join('.')}</strong><br>
+                    ${shiftBadge}
+                </td>
+                <td><code>${r.mainNumber}</code></td>
+                <td><code>${r.subNumber}</code></td>
+                <td><strong>+${r.quantity} шт</strong></td>
+                <td>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-warning btn-sm" style="padding: 6px 10px;" onclick="editRecord(${r.id})">Изменить</button>
+                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px;" onclick="deleteRecord(${r.id})">Удалить</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('monthTotal').innerText = monthTotal + ' шт';
+        document.getElementById('monthPlan').innerText = monthPlan + ' шт';
+        document.getElementById('planDaysInfo').innerText = `${workingDaysCount} смен назначено`;
+
+        const monthPercent = monthPlan > 0 ? Math.round((monthTotal / monthPlan) * 100) : 0;
+        const monthPercentElem = document.getElementById('monthPercent');
+        monthPercentElem.innerText = monthPercent + '% от плана';
+        monthPercentElem.style.color = monthPercent >= 100 ? 'var(--success)' : 'var(--text-muted)';
+
+        const monthLeft = Math.max(0, monthPlan - monthTotal);
+        document.getElementById('monthLeft').innerText = monthLeft + ' шт';
+
+        let daysLeft = 0;
+        let leftDayShifts = 0;
+        let leftEveningShifts = 0;
+        const now = new Date();
+        const isCurrentMonth = (selYear === now.getFullYear() && selMonth === (now.getMonth() + 1));
+        
+        if (isCurrentMonth) {
+            const totalDaysInMonth = new Date(selYear, selMonth, 0).getDate();
+            for (let d = now.getDate(); d <= totalDaysInMonth; d++) {
+                const mm = String(selMonth).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                const dateStr = `${selYear}-${mm}-${dd}`;
+                const shift = shiftSchedule[dateStr];
+                if (shift) {
+                    daysLeft++;
+                    if (shift === 'day') leftDayShifts++;
+                    if (shift === 'evening') leftEveningShifts++;
+                }
+            }
+        }
+
+        if (isCurrentMonth && daysLeft > 0) {
+            document.getElementById('daysLeftInfo').innerText = `Осталось смен: ${daysLeft} (${leftDayShifts} д, ${leftEveningShifts} в)`;
+        } else {
+            document.getElementById('daysLeftInfo').innerText = isCurrentMonth ? `Месяц завершен` : `Архивный месяц`;
+        }
+
+        document.getElementById('recordCount').innerText = `Найдено записей: ${filteredRecords.length}`;
+    }
+
+    function exportData() {
+        const backupData = {
+            records,
+            settings,
+            shiftSchedule
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "production_backup.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (Array.isArray(imported)) {
+                    records = imported;
+                } else if (imported && imported.records) {
+                    records = imported.records;
+                    if (imported.settings) settings = imported.settings;
+                    if (imported.shiftSchedule) shiftSchedule = imported.shiftSchedule;
+                }
+                saveAndRender();
+                alert('Данные успешно загружены!');
+            } catch (err) {
+                alert('Ошибка при чтении файла.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    render();
+</script>
+
+</body>
+</html>
