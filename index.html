@@ -910,6 +910,33 @@
         return { fc, pr, total: fc + pr };
     }
 
+    function quotaForDay(shiftType, fcQty, prQty) {
+        const fcNorm = shiftType === 'evening' ? settings.fcEve : settings.fcDay;
+        const prNorm = shiftType === 'evening' ? settings.prEve : settings.prDay;
+        const total = (Number(fcQty) || 0) + (Number(prQty) || 0);
+        if (total <= 0) return fcNorm;
+        return Math.round((fcNorm * fcQty + prNorm * prQty) / total);
+    }
+
+    function getMonthPlanData(year, month) {
+        let totalPlan = 0;
+        let assignedShiftsCount = 0;
+        const days = daysInCalendarMonth(year, month);
+
+        for (let day = 1; day <= days; day++) {
+            const mm = String(month).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
+            const shift = shiftSchedule[dateStr];
+            if (shift !== 'day' && shift !== 'evening') continue;
+
+            assignedShiftsCount++;
+            const dayMix = mixTotals(records.filter(r => r.date === dateStr));
+            totalPlan += quotaForDay(shift, dayMix.fc, dayMix.pr);
+        }
+        return { totalPlan, assignedShiftsCount };
+    }
+
     document.getElementById('recordForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -1034,27 +1061,6 @@
             if (ym === currentSelected) opt.selected = true;
             filterSelect.appendChild(opt);
         });
-    }
-
-    function getMonthPlanData(year, month) {
-        let totalPlan = 0;
-        let assignedShiftsCount = 0;
-        const days = daysInCalendarMonth(year, month);
-
-        for (let day = 1; day <= days; day++) {
-            const mm = String(month).padStart(2, '0');
-            const dd = String(day).padStart(2, '0');
-            const dateStr = `${year}-${mm}-${dd}`;
-            const shift = shiftSchedule[dateStr];
-            if (shift === 'day') {
-                totalPlan += settings.fcDay;
-                assignedShiftsCount++;
-            } else if (shift === 'evening') {
-                totalPlan += settings.fcEve;
-                assignedShiftsCount++;
-            }
-        }
-        return { totalPlan, assignedShiftsCount };
     }
 
     function openCalendarModal() {
