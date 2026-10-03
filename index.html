@@ -187,11 +187,24 @@
             background-color: #f8fafc;
         }
 
-        /* Ограничение высоты таблицы истории до ~6 строк с прокруткой внутри */
         .table-scroll-container {
-            max-height: 340px;
+            max-height: 420px;
             overflow-y: auto;
-            border-bottom: 1px solid var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #f8fafc;
+        }
+
+        .data-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .badge {
@@ -292,22 +305,22 @@
 
         .cal-day .day-num { font-size: 0.85rem; line-height: 1; }
         .cal-day .shift-lbl { font-size: 0.6rem; opacity: 0.9; line-height: 1; margin-top: 2px; }
-        .cal-day.empty { border: none; background: transparent; cursor: default; min-height: 56px; height: 56px; }
+        .cal-day.empty { border: none; background: transparent; cursor: default; min-height: 56px; height: 56px; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Учёт произведенных деталей</h1>
-        <p style="color: var(--text-muted); margin: 0;">Назначение смен, подсчёт плана</p>
+        <h1>Учет произведенных деталей</h1>
+        <p style="color: var(--text-muted); margin: 0;">ФЦ и ПР: смешанные партии и точный учет</p>
     </header>
 
     <!-- Панель управления нормами и календарем -->
     <div class="card" style="padding: 15px 20px; background: #eff6ff; border-color: #bfdbfe;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
-                <strong>Нормы:</strong> фц (день:<span id="fcDayView">220</span>/вечер:<span id="fcEveView">200</span>) | пр (день:<span id="prDayView">200</span>/вечер:<span id="prEveView">175</span>)
+                <strong>Нормы:</strong> ФЦ (Д:<span id="fcDayView">220</span>/В:<span id="fcEveView">200</span>) | ПР (Д:<span id="prDayView">200</span>/В:<span id="prEveView">175</span>)
             </div>
             <div style="display: flex; gap: 8px;">
                 <button class="btn btn-secondary btn-sm" onclick="openCalendarModal()">📅 График смен</button>
@@ -394,9 +407,9 @@
                     <label for="quantity">Количество деталей</label>
                     <input type="number" id="quantity" placeholder="Введите количество" min="1" required>
                     <div class="quick-btns">
-                        <button type="button" class="quick-btn" onclick="setQty(50)">+50</button>
-                        <button type="button" class="quick-btn" onclick="setQty(100)">+100</button>
-                        <button type="button" class="quick-btn" onclick="setQty(200)">+200</button>
+                        <button type="button" class="quick-btn" onclick="addQty(50)">+50</button>
+                        <button type="button" class="quick-btn" onclick="addQty(100)">+100</button>
+                        <button type="button" class="quick-btn" onclick="addQty(200)">+200</button>
                     </div>
                 </div>
             </div>
@@ -419,8 +432,7 @@
                 <span id="recordCount" style="color: var(--text-muted); font-size: 0.875rem;"></span>
             </div>
         </div>
-        
-        <!-- Ограничение по высоте до 6 строк -->
+
         <div class="table-scroll-container">
             <table id="recordsTable">
                 <thead>
@@ -441,20 +453,21 @@
         <div class="actions-bar">
             <button class="btn btn-secondary" onclick="exportData()">Экспорт в файл</button>
             <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Импорт из файла</button>
-            <input type="file" id="importFile" style="display: none;" onchange="importData(event)">
+            <input type="file" id="importFile" accept=".json,application/json" style="display: none;" onchange="importData(event)">
         </div>
+        <p class="data-hint">Данные хранятся только в этом браузере на этом компьютере. Регулярно делайте экспорт, чтобы не потерять учёт.</p>
     </div>
 </div>
 
 <!-- Модальное окно календаря для назначения смен -->
-<div id="calendarModal" class="modal">
+<div id="calendarModal" class="modal" onclick="if (event.target === this) closeCalendarModal()">
     <div class="modal-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0; font-size: 1.1rem;">График смен месяца</h3>
             <button class="btn btn-secondary btn-sm" onclick="closeCalendarModal()">✕</button>
         </div>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">Кликайте по дню, чтобы отметить тип смены.</p>
-        
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <button class="btn btn-secondary btn-sm" onclick="changeCalendarMonth(-1)">◀ Месяц</button>
             <span id="calMonthName" style="font-weight: 600;"></span>
@@ -480,11 +493,11 @@
 </div>
 
 <!-- Модальное окно выбора смены для конкретного дня -->
-<div id="shiftSelectModal" class="modal">
+<div id="shiftSelectModal" class="modal" onclick="if (event.target === this) closeShiftSelectModal()">
     <div class="modal-content" style="max-width: 320px; text-align: center;">
         <h3 id="selectedDateTitle" style="margin-top: 0; font-size: 1.1rem;">Выбор смены</h3>
         <p style="font-size: 0.85rem; color: var(--text-muted);">Какая смена была в этот день?</p>
-        
+
         <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
             <button class="btn" style="background-color: #2563eb;" onclick="setDayShiftModal('day')">☀️ Дневная смена</button>
             <button class="btn" style="background-color: #d97706;" onclick="setDayShiftModal('evening')">🌙 Вечерняя смена</button>
@@ -495,27 +508,96 @@
 </div>
 
 <script>
-    let records = JSON.parse(localStorage.getItem('production_records')) || [];
-    let settings = JSON.parse(localStorage.getItem('production_settings')) || { fcDay: 220, fcEve: 200, prDay: 200, prEve: 175 };
-    let shiftSchedule = JSON.parse(localStorage.getItem('production_shift_schedule')) || {};
+    const DEFAULT_SETTINGS = { fcDay: 220, fcEve: 200, prDay: 200, prEve: 175 };
+
+    function loadJson(key, fallback) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw == null) return fallback;
+            const parsed = JSON.parse(raw);
+            return parsed == null ? fallback : parsed;
+        } catch (err) {
+            return fallback;
+        }
+    }
+
+    function persistAll() {
+        try {
+            localStorage.setItem('production_records', JSON.stringify(records));
+            localStorage.setItem('production_settings', JSON.stringify(settings));
+            localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+        } catch (err) {
+            alert('Не удалось сохранить данные. Память браузера переполнена — сделайте экспорт.');
+        }
+    }
+
+    function localISODate(d) {
+        const date = d || new Date();
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function localYearMonth(d) {
+        return localISODate(d).substring(0, 7);
+    }
+
+    function daysInMonth(year, month1to12) {
+        return new Date(year, month1to12, 0).getDate();
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function newRecordId() {
+        if (window.crypto && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 9);
+    }
+
+    function qtyOf(record) {
+        const n = Number(record && record.quantity);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    let records = loadJson('production_records', []);
+    if (!Array.isArray(records)) records = [];
+
+    let settings = Object.assign({}, DEFAULT_SETTINGS, loadJson('production_settings', {}));
+    let shiftSchedule = loadJson('production_shift_schedule', {});
+    if (!shiftSchedule || typeof shiftSchedule !== 'object' || Array.isArray(shiftSchedule)) {
+        shiftSchedule = {};
+    }
 
     let currentCalDate = new Date();
     let activeDateStrForModal = '';
 
-    document.getElementById('inputFcDay').value = settings.fcDay;
-    document.getElementById('inputFcEve').value = settings.fcEve;
-    document.getElementById('inputPrDay').value = settings.prDay;
-    document.getElementById('inputPrEve').value = settings.prEve;
+    function applySettingsToUi() {
+        document.getElementById('inputFcDay').value = settings.fcDay;
+        document.getElementById('inputFcEve').value = settings.fcEve;
+        document.getElementById('inputPrDay').value = settings.prDay;
+        document.getElementById('inputPrEve').value = settings.prEve;
+        document.getElementById('fcDayView').innerText = settings.fcDay;
+        document.getElementById('fcEveView').innerText = settings.fcEve;
+        document.getElementById('prDayView').innerText = settings.prDay;
+        document.getElementById('prEveView').innerText = settings.prEve;
+    }
 
-    document.getElementById('fcDayView').innerText = settings.fcDay;
-    document.getElementById('fcEveView').innerText = settings.fcEve;
-    document.getElementById('prDayView').innerText = settings.prDay;
-    document.getElementById('prEveView').innerText = settings.prEve;
+    applySettingsToUi();
+    document.getElementById('date').value = localISODate();
 
-    document.getElementById('date').valueAsDate = new Date();
-
-    function setQty(val) {
-        document.getElementById('quantity').value = val;
+    function addQty(val) {
+        const el = document.getElementById('quantity');
+        const current = parseInt(el.value, 10) || 0;
+        el.value = current + val;
     }
 
     function toggleSettings() {
@@ -523,21 +605,50 @@
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
+    function readNorm(id, fallback) {
+        const n = parseInt(document.getElementById(id).value, 10);
+        return Number.isFinite(n) && n >= 0 ? n : fallback;
+    }
+
     function saveSettings() {
-        settings.fcDay = parseInt(document.getElementById('inputFcDay').value) || 220;
-        settings.fcEve = parseInt(document.getElementById('inputFcEve').value) || 200;
-        settings.prDay = parseInt(document.getElementById('inputPrDay').value) || 200;
-        settings.prEve = parseInt(document.getElementById('inputPrEve').value) || 175;
-        
-        localStorage.setItem('production_settings', JSON.stringify(settings));
-        
-        document.getElementById('fcDayView').innerText = settings.fcDay;
-        document.getElementById('fcEveView').innerText = settings.fcEve;
-        document.getElementById('prDayView').innerText = settings.prDay;
-        document.getElementById('prEveView').innerText = settings.prEve;
-        
+        settings.fcDay = readNorm('inputFcDay', DEFAULT_SETTINGS.fcDay);
+        settings.fcEve = readNorm('inputFcEve', DEFAULT_SETTINGS.fcEve);
+        settings.prDay = readNorm('inputPrDay', DEFAULT_SETTINGS.prDay);
+        settings.prEve = readNorm('inputPrEve', DEFAULT_SETTINGS.prEve);
+        persistAll();
+        applySettingsToUi();
         toggleSettings();
         render();
+    }
+
+    function normForShift(shift, partType) {
+        if (partType === 'pr') {
+            return shift === 'evening' ? settings.prEve : settings.prDay;
+        }
+        return shift === 'evening' ? settings.fcEve : settings.fcDay;
+    }
+
+    function planForDate(dateStr) {
+        const shift = shiftSchedule[dateStr];
+        if (shift !== 'day' && shift !== 'evening') return 0;
+
+        const dayRecords = records.filter(r => r.date === dateStr);
+        let fcQty = 0;
+        let prQty = 0;
+        dayRecords.forEach(r => {
+            if (r.partType === 'pr') prQty += qtyOf(r);
+            else fcQty += qtyOf(r);
+        });
+
+        const total = fcQty + prQty;
+        if (total === 0) {
+            return normForShift(shift, 'fc');
+        }
+        if (prQty === 0) return normForShift(shift, 'fc');
+        if (fcQty === 0) return normForShift(shift, 'pr');
+
+        const mixed = (fcQty / total) * normForShift(shift, 'fc') + (prQty / total) * normForShift(shift, 'pr');
+        return Math.round(mixed);
     }
 
     document.getElementById('recordForm').addEventListener('submit', function(e) {
@@ -549,15 +660,20 @@
         const shiftType = document.getElementById('shiftType').value;
         const mainNumber = document.getElementById('mainNumber').value.trim();
         const subNumber = document.getElementById('subNumber').value.trim();
-        const quantity = parseInt(document.getElementById('quantity').value);
+        const quantity = parseInt(document.getElementById('quantity').value, 10);
 
-        if (mainNumber.length !== 6 || isNaN(mainNumber)) {
+        if (!/^\d{6}$/.test(mainNumber)) {
             alert('Табельный номер должен состоять ровно из 6 цифр!');
             return;
         }
 
+        if (!Number.isFinite(quantity) || quantity < 1) {
+            alert('Укажите количество больше 0.');
+            return;
+        }
+
         if (editId) {
-            const index = records.findIndex(r => r.id == editId);
+            const index = records.findIndex(r => String(r.id) === String(editId));
             if (index !== -1) {
                 records[index] = {
                     ...records[index],
@@ -571,31 +687,26 @@
             }
             cancelEdit();
         } else {
-            const newRecord = {
-                id: Date.now(),
+            records.unshift({
+                id: newRecordId(),
                 date,
                 partType,
                 shiftType,
                 mainNumber,
                 subNumber,
                 quantity
-            };
-            records.unshift(newRecord);
-            
-            if (!shiftSchedule[date]) {
-                shiftSchedule[date] = shiftType;
-                localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
-            }
-
+            });
             document.getElementById('mainNumber').value = '';
             document.getElementById('subNumber').value = '';
         }
 
-        saveAndRender();
+        shiftSchedule[date] = shiftType;
+        persistAll();
+        render();
     });
 
     function editRecord(id) {
-        const record = records.find(r => r.id === id);
+        const record = records.find(r => String(r.id) === String(id));
         if (!record) return;
 
         document.getElementById('editRecordId').value = record.id;
@@ -617,7 +728,7 @@
     function cancelEdit() {
         document.getElementById('editRecordId').value = '';
         document.getElementById('recordForm').reset();
-        document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('date').value = localISODate();
         document.getElementById('partType').value = 'fc';
         document.getElementById('shiftType').value = 'day';
 
@@ -629,20 +740,16 @@
 
     function deleteRecord(id) {
         if (confirm('Удалить эту запись?')) {
-            records = records.filter(r => r.id !== id);
-            saveAndRender();
+            records = records.filter(r => String(r.id) !== String(id));
+            persistAll();
+            render();
         }
-    }
-
-    function saveAndRender() {
-        localStorage.setItem('production_records', JSON.stringify(records));
-        render();
     }
 
     function updateMonthFilter() {
         const filterSelect = document.getElementById('filterMonth');
         const monthsMap = new Set();
-        
+
         records.forEach(r => {
             if (r.date) monthsMap.add(r.date.substring(0, 7));
         });
@@ -650,18 +757,18 @@
             if (d) monthsMap.add(d.substring(0, 7));
         });
 
-        const currentYM = new Date().toISOString().substring(0, 7);
+        const currentYM = localYearMonth();
         monthsMap.add(currentYM);
 
         const sortedMonths = Array.from(monthsMap).sort().reverse();
         const currentSelected = filterSelect.value || currentYM;
         filterSelect.innerHTML = '';
-        
+
         sortedMonths.forEach(ym => {
             const [year, month] = ym.split('-');
-            const dateObj = new Date(year, month - 1, 1);
+            const dateObj = new Date(Number(year), Number(month) - 1, 1);
             const monthName = dateObj.toLocaleString('ru', { month: 'long', year: 'numeric' });
-            
+
             const opt = document.createElement('option');
             opt.value = ym;
             opt.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
@@ -673,19 +780,13 @@
     function getMonthPlanData(year, month) {
         let totalPlan = 0;
         let assignedShiftsCount = 0;
-        const daysInMonth = new Date(year, month, 0).getDate();
+        const totalDays = daysInMonth(year, month);
 
-        for (let day = 1; day <= daysInMonth; day++) {
-            const mm = String(month).padStart(2, '0');
-            const dd = String(day).padStart(2, '0');
-            const dateStr = `${year}-${mm}-${dd}`;
-
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const shift = shiftSchedule[dateStr];
-            if (shift === 'day') {
-                totalPlan += settings.fcDay;
-                assignedShiftsCount++;
-            } else if (shift === 'evening') {
-                totalPlan += settings.fcEve;
+            if (shift === 'day' || shift === 'evening') {
+                totalPlan += planForDate(dateStr);
                 assignedShiftsCount++;
             }
         }
@@ -693,7 +794,7 @@
     }
 
     function openCalendarModal() {
-        const filterYM = document.getElementById('filterMonth').value || new Date().toISOString().substring(0, 7);
+        const filterYM = document.getElementById('filterMonth').value || localYearMonth();
         const [y, m] = filterYM.split('-').map(Number);
         currentCalDate = new Date(y, m - 1, 1);
         renderCalendarModal();
@@ -713,7 +814,7 @@
     function renderCalendarModal() {
         const year = currentCalDate.getFullYear();
         const month = currentCalDate.getMonth();
-        
+
         const monthName = currentCalDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
         document.getElementById('calMonthName').innerText = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
@@ -722,8 +823,7 @@
 
         const jsDay = new Date(year, month, 1).getDay();
         const firstDayIndex = (jsDay === 0) ? 6 : jsDay - 1;
-        
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const totalDays = new Date(year, month + 1, 0).getDate();
 
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyCell = document.createElement('div');
@@ -731,14 +831,14 @@
             grid.appendChild(emptyCell);
         }
 
-        for (let day = 1; day <= daysInMonth; day++) {
+        for (let day = 1; day <= totalDays; day++) {
             const mm = String(month + 1).padStart(2, '0');
             const dd = String(day).padStart(2, '0');
             const dateStr = `${year}-${mm}-${dd}`;
 
             const cell = document.createElement('div');
             cell.className = 'cal-day';
-            
+
             const shift = shiftSchedule[dateStr];
             if (shift === 'day') {
                 cell.classList.add('day-shift');
@@ -770,95 +870,93 @@
         } else {
             shiftSchedule[activeDateStrForModal] = type;
         }
-        localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+        persistAll();
         closeShiftSelectModal();
         renderCalendarModal();
         render();
     }
 
     function fillWeekShifts() {
+        if (!confirm('Заполнить пн–пт сменами по календарным неделям и снять смены с сб/вс? Уже отмеченные дни этого месяца будут перезаписаны.')) {
+            return;
+        }
+
         const year = currentCalDate.getFullYear();
         const month = currentCalDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+        const jsDay = new Date(year, month, 1).getDay();
+        const firstDayIndex = (jsDay === 0) ? 6 : jsDay - 1;
 
-        for (let day = 1; day <= daysInMonth; day++) {
-            const mm = String(month + 1).padStart(2, '0');
-            const dd = String(day).padStart(2, '0');
-            const dateStr = `${year}-${mm}-${dd}`;
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dObj = new Date(year, month, day);
-            
-            if (dObj.getDay() !== 0 && dObj.getDay() !== 6) {
-                const weekIndex = Math.floor((day - 1) / 7);
-                shiftSchedule[dateStr] = weekIndex % 2 === 0 ? 'day' : 'evening';
+            const dow = dObj.getDay();
+
+            if (dow === 0 || dow === 6) {
+                delete shiftSchedule[dateStr];
+                continue;
             }
+
+            const weekRow = Math.floor((firstDayIndex + day - 1) / 7);
+            shiftSchedule[dateStr] = weekRow % 2 === 0 ? 'day' : 'evening';
         }
-        localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+        persistAll();
         renderCalendarModal();
         render();
     }
 
     function render() {
         updateMonthFilter();
-        const selectedYM = document.getElementById('filterMonth').value || new Date().toISOString().substring(0, 7);
+        const selectedYM = document.getElementById('filterMonth').value || localYearMonth();
         const [selYear, selMonth] = selectedYM.split('-').map(Number);
         const searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
 
         const tbody = document.getElementById('recordsList');
         tbody.innerHTML = '';
 
-        let monthTotal = 0;
-
         const planData = getMonthPlanData(selYear, selMonth);
         const monthPlan = planData.totalPlan;
         const workingDaysCount = planData.assignedShiftsCount;
 
+        let monthTotal = 0;
         records.forEach(r => {
             const rYM = r.date ? r.date.substring(0, 7) : '';
-            if (rYM === selectedYM) {
-                monthTotal += r.quantity;
-            }
+            if (rYM === selectedYM) monthTotal += qtyOf(r);
         });
 
         const filteredRecords = records.filter(r => {
             const matchesMonth = r.date && r.date.substring(0, 7) === selectedYM;
             if (!matchesMonth) return false;
-
-            if (searchQuery) {
-                const mainMatch = r.mainNumber.toLowerCase().includes(searchQuery);
-                const subMatch = r.subNumber.toLowerCase().includes(searchQuery);
-                return mainMatch || subMatch;
-            }
-            return true;
+            if (!searchQuery) return true;
+            const mainMatch = String(r.mainNumber || '').toLowerCase().includes(searchQuery);
+            const subMatch = String(r.subNumber || '').toLowerCase().includes(searchQuery);
+            return mainMatch || subMatch;
         });
 
-        // Ограничиваем показ первыми 6 записями
-        const displayedRecords = filteredRecords.slice(0, 6);
-
-        displayedRecords.forEach(r => {
+        filteredRecords.forEach(r => {
             const tr = document.createElement('tr');
-            
             const partName = (r.partType === 'pr') ? 'ПР' : 'ФЦ';
             const partBadgeClass = (r.partType === 'pr') ? 'badge-pr' : 'badge-fc';
-            const partBadge = `<span class="badge ${partBadgeClass}">${partName}</span>`;
-
-            const shiftBadge = r.shiftType === 'day' 
-                ? '<span class="badge badge-day">День</span>' 
+            const safeDate = escapeHtml((r.date || '').split('-').reverse().join('.'));
+            const shiftBadge = r.shiftType === 'day'
+                ? '<span class="badge badge-day">День</span>'
                 : '<span class="badge badge-evening">Вечер</span>';
+            const safeId = escapeHtml(r.id);
 
             tr.innerHTML = `
                 <td>
-                    <strong>${r.date.split('-').reverse().join('.')}</strong><br>
+                    <strong>${safeDate}</strong>
                     <div style="margin-top: 3px; display: flex; gap: 4px; align-items: center;">
-                        ${partBadge} ${shiftBadge}
+                        <span class="badge ${partBadgeClass}">${partName}</span> ${shiftBadge}
                     </div>
                 </td>
-                <td><code>${r.mainNumber}</code></td>
-                <td><code>${r.subNumber}</code></td>
-                <td><strong>+${r.quantity} шт</strong></td>
+                <td><code>${escapeHtml(r.mainNumber)}</code></td>
+                <td><code>${escapeHtml(r.subNumber)}</code></td>
+                <td><strong>+${qtyOf(r)} шт</strong></td>
                 <td>
                     <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-warning btn-sm" style="padding: 6px 10px;" onclick="editRecord(${r.id})">Изменить</button>
-                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px;" onclick="deleteRecord(${r.id})">Удалить</button>
+                        <button class="btn btn-warning btn-sm" style="padding: 6px 10px;" onclick="editRecord('${safeId}')">Изменить</button>
+                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px;" onclick="deleteRecord('${safeId}')">Удалить</button>
                     </div>
                 </td>
             `;
@@ -874,49 +972,59 @@
         monthPercentElem.innerText = monthPercent + '% от плана';
         monthPercentElem.style.color = monthPercent >= 100 ? 'var(--success)' : 'var(--text-muted)';
 
-        const monthLeft = Math.max(0, monthPlan - monthTotal);
-        document.getElementById('monthLeft').innerText = monthLeft + ' шт';
+        const monthLeftElem = document.getElementById('monthLeft');
+        const leftover = monthPlan - monthTotal;
+        if (leftover > 0) {
+            monthLeftElem.innerText = leftover + ' шт';
+            monthLeftElem.style.color = 'var(--warning)';
+        } else if (leftover < 0) {
+            monthLeftElem.innerText = '+' + Math.abs(leftover) + ' шт сверх плана';
+            monthLeftElem.style.color = 'var(--success)';
+        } else {
+            monthLeftElem.innerText = '0 шт';
+            monthLeftElem.style.color = monthPlan > 0 ? 'var(--success)' : 'var(--warning)';
+        }
 
         let daysLeft = 0;
         let leftDayShifts = 0;
         let leftEveningShifts = 0;
         const now = new Date();
         const isCurrentMonth = (selYear === now.getFullYear() && selMonth === (now.getMonth() + 1));
-        
+        const todayStr = localISODate(now);
+
         if (isCurrentMonth) {
-            const totalDaysInMonth = new Date(selYear, selMonth, 0).getDate();
-            for (let d = now.getDate(); d <= totalDaysInMonth; d++) {
-                const mm = String(selMonth).padStart(2, '0');
-                const dd = String(d).padStart(2, '0');
-                const dateStr = `${selYear}-${mm}-${dd}`;
+            const totalDays = daysInMonth(selYear, selMonth);
+            for (let d = now.getDate(); d <= totalDays; d++) {
+                const dateStr = `${selYear}-${String(selMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const shift = shiftSchedule[dateStr];
-                if (shift) {
-                    daysLeft++;
-                    if (shift === 'day') leftDayShifts++;
-                    if (shift === 'evening') leftEveningShifts++;
-                }
+                if (shift !== 'day' && shift !== 'evening') continue;
+                if (dateStr === todayStr && records.some(r => r.date === todayStr)) continue;
+                daysLeft++;
+                if (shift === 'day') leftDayShifts++;
+                if (shift === 'evening') leftEveningShifts++;
             }
         }
 
-        if (isCurrentMonth && daysLeft > 0) {
-            document.getElementById('daysLeftInfo').innerText = `Осталось смен: ${daysLeft} (${leftDayShifts} д, ${leftEveningShifts} в)`;
+        const daysLeftInfo = document.getElementById('daysLeftInfo');
+        if (!isCurrentMonth) {
+            daysLeftInfo.innerText = 'Архивный месяц';
+        } else if (workingDaysCount === 0) {
+            daysLeftInfo.innerText = 'Смены не назначены';
+        } else if (daysLeft > 0) {
+            daysLeftInfo.innerText = `Осталось смен: ${daysLeft} (${leftDayShifts} д, ${leftEveningShifts} в)`;
         } else {
-            document.getElementById('daysLeftInfo').innerText = isCurrentMonth ? `Месяц завершен` : `Архивный месяц`;
+            daysLeftInfo.innerText = 'Месяц завершен';
         }
 
         document.getElementById('recordCount').innerText = `Всего записей: ${filteredRecords.length}`;
     }
 
     function exportData() {
-        const backupData = {
-            records,
-            settings,
-            shiftSchedule
-        };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const backupData = { records, settings, shiftSchedule };
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
         const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", "production_backup.json");
+        downloadAnchor.setAttribute('href', dataStr);
+        downloadAnchor.setAttribute('download', 'production_backup.json');
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
@@ -930,18 +1038,35 @@
         reader.onload = function(e) {
             try {
                 const imported = JSON.parse(e.target.result);
+                if (!confirm('Заменить текущие записи, нормы и график данными из файла? Это нельзя отменить, кроме как импортом старого бэкапа.')) {
+                    event.target.value = '';
+                    return;
+                }
+
                 if (Array.isArray(imported)) {
                     records = imported;
-                } else if (imported && imported.records) {
+                } else if (imported && Array.isArray(imported.records)) {
                     records = imported.records;
-                    if (imported.settings) settings = imported.settings;
-                    if (imported.shiftSchedule) shiftSchedule = imported.shiftSchedule;
+                    if (imported.settings && typeof imported.settings === 'object') {
+                        settings = Object.assign({}, DEFAULT_SETTINGS, imported.settings);
+                    }
+                    if (imported.shiftSchedule && typeof imported.shiftSchedule === 'object') {
+                        shiftSchedule = imported.shiftSchedule;
+                    }
+                } else {
+                    alert('В файле нет записей учёта.');
+                    event.target.value = '';
+                    return;
                 }
-                saveAndRender();
+
+                persistAll();
+                applySettingsToUi();
+                render();
                 alert('Данные успешно загружены!');
             } catch (err) {
                 alert('Ошибка при чтении файла.');
             }
+            event.target.value = '';
         };
         reader.readAsText(file);
     }
