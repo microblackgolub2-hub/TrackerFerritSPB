@@ -176,7 +176,7 @@
         }
 
         th, td {
-            padding: 12px;
+            padding: 10px 12px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
@@ -187,16 +187,25 @@
             background-color: #f8fafc;
         }
 
+        /* Ограничение высоты таблицы истории до ~6 строк с прокруткой внутри */
+        .table-scroll-container {
+            max-height: 340px;
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border-color);
+        }
+
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.68rem;
             font-weight: 600;
         }
 
         .badge-day { background-color: #dbeafe; color: #1e40af; }
         .badge-evening { background-color: #fef3c7; color: #92400e; }
+        .badge-fc { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .badge-pr { background-color: #fae8ff; color: #86198f; border: 1px solid #f5d0fe; }
 
         .actions-bar {
             display: flex;
@@ -259,8 +268,8 @@
             padding-bottom: 4px;
         }
         .cal-day {
-            min-height: 54px;
-            height: 54px;
+            min-height: 56px;
+            height: 56px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -278,65 +287,52 @@
         .cal-day:hover {
             border-color: var(--primary);
         }
-        .cal-day.day-shift {
-            background: #dbeafe;
-            border-color: #93c5fd;
-            color: #1e40af;
-            font-weight: bold;
-        }
-        .cal-day.evening-shift {
-            background: #fef3c7;
-            border-color: #fde68a;
-            color: #92400e;
-            font-weight: bold;
-        }
-        .cal-day .day-num {
-            font-size: 0.9rem;
-            line-height: 1.1;
-        }
-        .cal-day .shift-lbl {
-            font-size: 0.6rem;
-            opacity: 0.85;
-            line-height: 1;
-            margin-top: 2px;
-        }
-        .cal-day.empty {
-            border: none;
-            background: transparent;
-            cursor: default;
-            min-height: 54px;
-            height: 54px;
-        }
+        .cal-day.day-shift { background: #dbeafe; border-color: #93c5fd; color: #1e40af; font-weight: bold; }
+        .cal-day.evening-shift { background: #fef3c7; border-color: #fde68a; color: #92400e; font-weight: bold; }
+
+        .cal-day .day-num { font-size: 0.85rem; line-height: 1; }
+        .cal-day .shift-lbl { font-size: 0.6rem; opacity: 0.9; line-height: 1; margin-top: 2px; }
+        .cal-day.empty { border: none; background: transparent; cursor: default; min-height: 56px; height: 56px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Учет произведенных деталей</h1>
-        <p style="color: var(--text-muted); margin: 0;">Точный график смен и автоматический расчет плана</p>
+        <h1>НормаКонтроль</h1>
+        <p style="color: var(--text-muted); margin: 0;">Атоматичесуий подсчёт плана</p>
     </header>
 
     <!-- Панель управления нормами и календарем -->
     <div class="card" style="padding: 15px 20px; background: #eff6ff; border-color: #bfdbfe;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
-                <strong>Норма смен:</strong> День = <span id="dayNormView">220</span> | Вечер = <span id="eveningNormView">200</span>
+                <strong>Нормы:</strong> фц (д:<span id="fcDayView">220</span>/в:<span id="fcEveView">200</span>) | пр (д:<span id="prDayView">200</span>/в:<span id="prEveView">175</span>)
             </div>
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary btn-sm" onclick="openCalendarModal()">📅 График смен месяца</button>
-                <button class="btn btn-secondary btn-sm" onclick="toggleSettings()">⚙️ Настройки</button>
+                <button class="btn btn-secondary btn-sm" onclick="openCalendarModal()">📅 График смен</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleSettings()">⚙️ Нормы</button>
             </div>
         </div>
         <div id="settingsPanel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bfdbfe;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: flex-end;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                 <div>
-                    <label style="font-size: 0.8rem;">Норма день:</label>
-                    <input type="number" id="inputDayNorm" value="220" style="padding: 6px;">
+                    <label style="font-size: 0.8rem;">ФЦ День:</label>
+                    <input type="number" id="inputFcDay" style="padding: 6px;">
                 </div>
                 <div>
-                    <label style="font-size: 0.8rem;">Норма вечер:</label>
-                    <input type="number" id="inputEveningNorm" value="200" style="padding: 6px;">
+                    <label style="font-size: 0.8rem;">ФЦ Вечер:</label>
+                    <input type="number" id="inputFcEve" style="padding: 6px;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: flex-end;">
+                <div>
+                    <label style="font-size: 0.8rem;">ПР День:</label>
+                    <input type="number" id="inputPrDay" style="padding: 6px;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem;">ПР Вечер:</label>
+                    <input type="number" id="inputPrEve" style="padding: 6px;">
                 </div>
                 <button class="btn btn-sm" onclick="saveSettings()" style="height: 38px;">Сохранить</button>
             </div>
@@ -373,6 +369,13 @@
                     <input type="date" id="date" required>
                 </div>
                 <div class="form-group">
+                    <label for="partType">Вид деталей</label>
+                    <select id="partType">
+                        <option value="fc">ФЦ</option>
+                        <option value="pr">ПР</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="shiftType">Смена</label>
                     <select id="shiftType">
                         <option value="day">День</option>
@@ -383,7 +386,7 @@
                     <label for="mainNumber">Табельный номер (6 цифр)</label>
                     <input type="text" id="mainNumber" placeholder="Напр: 664352" maxlength="6" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group full-width">
                     <label for="subNumber">Второй номер (через слэш)</label>
                     <input type="text" id="subNumber" placeholder="Напр: 558.25.1.11" required>
                 </div>
@@ -391,10 +394,9 @@
                     <label for="quantity">Количество деталей</label>
                     <input type="number" id="quantity" placeholder="Введите количество" min="1" required>
                     <div class="quick-btns">
+                        <button type="button" class="quick-btn" onclick="setQty(50)">+50</button>
                         <button type="button" class="quick-btn" onclick="setQty(100)">+100</button>
                         <button type="button" class="quick-btn" onclick="setQty(200)">+200</button>
-                        <button type="button" class="quick-btn" onclick="setQty(220)">Норма дня (220)</button>
-                        <button type="button" class="quick-btn" onclick="setQty(200)">Норма вечера (200)</button>
                     </div>
                 </div>
             </div>
@@ -417,7 +419,9 @@
                 <span id="recordCount" style="color: var(--text-muted); font-size: 0.875rem;"></span>
             </div>
         </div>
-        <div style="overflow-x: auto;">
+        
+        <!-- Ограничение по высоте до 6 строк -->
+        <div class="table-scroll-container">
             <table id="recordsTable">
                 <thead>
                     <tr>
@@ -449,7 +453,7 @@
             <h3 style="margin: 0; font-size: 1.1rem;">График смен месяца</h3>
             <button class="btn btn-secondary btn-sm" onclick="closeCalendarModal()">✕</button>
         </div>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">Кликайте по дню, чтобы выбрать тип смены (День / Вечер / Выходной).</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">Кликайте по дню, чтобы отметить тип смены.</p>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <button class="btn btn-secondary btn-sm" onclick="changeCalendarMonth(-1)">◀ Месяц</button>
@@ -469,7 +473,7 @@
         <div id="calDaysGrid" class="cal-grid" style="margin-top: 4px;"></div>
 
         <div style="margin-top: 20px; display: flex; gap: 10px;">
-            <button class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="fillWeekShifts()">Неделя День / Вечер</button>
+            <button class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="fillWeekShifts()">Пятидневка (День/Вечер)</button>
             <button class="btn" style="flex: 1; padding: 8px;" onclick="closeCalendarModal()">Готово</button>
         </div>
     </div>
@@ -482,8 +486,8 @@
         <p style="font-size: 0.85rem; color: var(--text-muted);">Какая смена была в этот день?</p>
         
         <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-            <button class="btn" style="background-color: #2563eb;" onclick="setDayShiftModal('day')">☀️ Дневная смена (Норма: <span id="modalDayNormVal">220</span>)</button>
-            <button class="btn" style="background-color: #d97706;" onclick="setDayShiftModal('evening')">🌙 Вечерняя смена (Норма: <span id="modalEveningNormVal">200</span>)</button>
+            <button class="btn" style="background-color: #2563eb;" onclick="setDayShiftModal('day')">☀️ Дневная смена</button>
+            <button class="btn" style="background-color: #d97706;" onclick="setDayShiftModal('evening')">🌙 Вечерняя смена</button>
             <button class="btn btn-danger" onclick="setDayShiftModal('off')">❌ Выходной / Снять смену</button>
         </div>
         <button class="btn btn-secondary btn-sm" style="margin-top: 15px; width: 100%;" onclick="closeShiftSelectModal()">Отмена</button>
@@ -492,31 +496,23 @@
 
 <script>
     let records = JSON.parse(localStorage.getItem('production_records')) || [];
-    let settings = JSON.parse(localStorage.getItem('production_settings')) || { dayNorm: 220, eveningNorm: 200 };
+    let settings = JSON.parse(localStorage.getItem('production_settings')) || { fcDay: 220, fcEve: 200, prDay: 200, prEve: 175 };
     let shiftSchedule = JSON.parse(localStorage.getItem('production_shift_schedule')) || {};
 
     let currentCalDate = new Date();
     let activeDateStrForModal = '';
 
-    document.getElementById('inputDayNorm').value = settings.dayNorm;
-    document.getElementById('inputEveningNorm').value = settings.eveningNorm;
-    document.getElementById('dayNormView').innerText = settings.dayNorm;
-    document.getElementById('eveningNormView').innerText = settings.eveningNorm;
+    document.getElementById('inputFcDay').value = settings.fcDay;
+    document.getElementById('inputFcEve').value = settings.fcEve;
+    document.getElementById('inputPrDay').value = settings.prDay;
+    document.getElementById('inputPrEve').value = settings.prEve;
+
+    document.getElementById('fcDayView').innerText = settings.fcDay;
+    document.getElementById('fcEveView').innerText = settings.fcEve;
+    document.getElementById('prDayView').innerText = settings.prDay;
+    document.getElementById('prEveView').innerText = settings.prEve;
 
     document.getElementById('date').valueAsDate = new Date();
-
-    document.getElementById('shiftType').addEventListener('change', function() {
-        const qtyInput = document.getElementById('quantity');
-        if (!document.getElementById('editRecordId').value) {
-            if (this.value === 'day') {
-                qtyInput.value = settings.dayNorm;
-            } else {
-                qtyInput.value = settings.eveningNorm;
-            }
-        }
-    });
-
-    document.getElementById('quantity').value = settings.dayNorm;
 
     function setQty(val) {
         document.getElementById('quantity').value = val;
@@ -528,12 +524,18 @@
     }
 
     function saveSettings() {
-        settings.dayNorm = parseInt(document.getElementById('inputDayNorm').value) || 220;
-        settings.eveningNorm = parseInt(document.getElementById('inputEveningNorm').value) || 200;
+        settings.fcDay = parseInt(document.getElementById('inputFcDay').value) || 220;
+        settings.fcEve = parseInt(document.getElementById('inputFcEve').value) || 200;
+        settings.prDay = parseInt(document.getElementById('inputPrDay').value) || 200;
+        settings.prEve = parseInt(document.getElementById('inputPrEve').value) || 175;
+        
         localStorage.setItem('production_settings', JSON.stringify(settings));
         
-        document.getElementById('dayNormView').innerText = settings.dayNorm;
-        document.getElementById('eveningNormView').innerText = settings.eveningNorm;
+        document.getElementById('fcDayView').innerText = settings.fcDay;
+        document.getElementById('fcEveView').innerText = settings.fcEve;
+        document.getElementById('prDayView').innerText = settings.prDay;
+        document.getElementById('prEveView').innerText = settings.prEve;
+        
         toggleSettings();
         render();
     }
@@ -543,6 +545,7 @@
 
         const editId = document.getElementById('editRecordId').value;
         const date = document.getElementById('date').value;
+        const partType = document.getElementById('partType').value;
         const shiftType = document.getElementById('shiftType').value;
         const mainNumber = document.getElementById('mainNumber').value.trim();
         const subNumber = document.getElementById('subNumber').value.trim();
@@ -559,6 +562,7 @@
                 records[index] = {
                     ...records[index],
                     date,
+                    partType,
                     shiftType,
                     mainNumber,
                     subNumber,
@@ -570,6 +574,7 @@
             const newRecord = {
                 id: Date.now(),
                 date,
+                partType,
                 shiftType,
                 mainNumber,
                 subNumber,
@@ -595,6 +600,7 @@
 
         document.getElementById('editRecordId').value = record.id;
         document.getElementById('date').value = record.date;
+        document.getElementById('partType').value = record.partType || 'fc';
         document.getElementById('shiftType').value = record.shiftType;
         document.getElementById('mainNumber').value = record.mainNumber;
         document.getElementById('subNumber').value = record.subNumber;
@@ -612,8 +618,8 @@
         document.getElementById('editRecordId').value = '';
         document.getElementById('recordForm').reset();
         document.getElementById('date').valueAsDate = new Date();
+        document.getElementById('partType').value = 'fc';
         document.getElementById('shiftType').value = 'day';
-        document.getElementById('quantity').value = settings.dayNorm;
 
         document.getElementById('formTitle').innerText = 'Добавить запись';
         document.getElementById('submitBtn').innerText = 'Добавить в учет';
@@ -666,8 +672,7 @@
 
     function getMonthPlanData(year, month) {
         let totalPlan = 0;
-        let dayShiftsCount = 0;
-        let eveningShiftsCount = 0;
+        let assignedShiftsCount = 0;
         const daysInMonth = new Date(year, month, 0).getDate();
 
         for (let day = 1; day <= daysInMonth; day++) {
@@ -677,14 +682,14 @@
 
             const shift = shiftSchedule[dateStr];
             if (shift === 'day') {
-                totalPlan += settings.dayNorm;
-                dayShiftsCount++;
+                totalPlan += settings.fcDay;
+                assignedShiftsCount++;
             } else if (shift === 'evening') {
-                totalPlan += settings.eveningNorm;
-                eveningShiftsCount++;
+                totalPlan += settings.fcEve;
+                assignedShiftsCount++;
             }
         }
-        return { totalPlan, dayShiftsCount, eveningShiftsCount, assignedShiftsCount: dayShiftsCount + eveningShiftsCount };
+        return { totalPlan, assignedShiftsCount };
     }
 
     function openCalendarModal() {
@@ -748,8 +753,6 @@
             cell.onclick = function() {
                 activeDateStrForModal = dateStr;
                 document.getElementById('selectedDateTitle').innerText = `Дата: ${dd}.${mm}.${year}`;
-                document.getElementById('modalDayNormVal').innerText = settings.dayNorm;
-                document.getElementById('modalEveningNormVal').innerText = settings.eveningNorm;
                 document.getElementById('shiftSelectModal').style.display = 'flex';
             };
 
@@ -828,8 +831,16 @@
             return true;
         });
 
-        filteredRecords.forEach(r => {
+        // Ограничиваем показ первыми 6 записями
+        const displayedRecords = filteredRecords.slice(0, 6);
+
+        displayedRecords.forEach(r => {
             const tr = document.createElement('tr');
+            
+            const partName = (r.partType === 'pr') ? 'ПР' : 'ФЦ';
+            const partBadgeClass = (r.partType === 'pr') ? 'badge-pr' : 'badge-fc';
+            const partBadge = `<span class="badge ${partBadgeClass}">${partName}</span>`;
+
             const shiftBadge = r.shiftType === 'day' 
                 ? '<span class="badge badge-day">День</span>' 
                 : '<span class="badge badge-evening">Вечер</span>';
@@ -837,7 +848,9 @@
             tr.innerHTML = `
                 <td>
                     <strong>${r.date.split('-').reverse().join('.')}</strong><br>
-                    ${shiftBadge}
+                    <div style="margin-top: 3px; display: flex; gap: 4px; align-items: center;">
+                        ${partBadge} ${shiftBadge}
+                    </div>
                 </td>
                 <td><code>${r.mainNumber}</code></td>
                 <td><code>${r.subNumber}</code></td>
@@ -891,7 +904,7 @@
             document.getElementById('daysLeftInfo').innerText = isCurrentMonth ? `Месяц завершен` : `Архивный месяц`;
         }
 
-        document.getElementById('recordCount').innerText = `Найдено записей: ${filteredRecords.length}`;
+        document.getElementById('recordCount').innerText = `Всего записей: ${filteredRecords.length}`;
     }
 
     function exportData() {
