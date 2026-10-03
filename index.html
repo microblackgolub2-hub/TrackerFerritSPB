@@ -831,10 +831,18 @@
         render();
     }
 
+    function asRecordList(raw) {
+        if (Array.isArray(raw)) return raw.filter(Boolean);
+        if (raw && typeof raw === 'object') {
+            return Object.keys(raw).sort().map(function(k) { return raw[k]; }).filter(Boolean);
+        }
+        return [];
+    }
+
     function applySnapshot(data) {
-        records = Array.isArray(data.records) ? data.records : [];
-        settings = normalizeSettings(data.settings);
-        const schedule = data.shiftSchedule;
+        records = asRecordList(data && data.records);
+        settings = normalizeSettings(data && data.settings);
+        const schedule = data && data.shiftSchedule;
         shiftSchedule = (schedule && typeof schedule === 'object' && !Array.isArray(schedule)) ? schedule : {};
         if (data && data.savedAt) savedAt = Number(data.savedAt) || savedAt;
     }
@@ -844,8 +852,8 @@
     }
 
     function diskLooksEmpty(data) {
-        const rec = Array.isArray(data && data.records) ? data.records : [];
-        const sch = (data && data.shiftSchedule && typeof data.shiftSchedule === 'object') ? data.shiftSchedule : {};
+        const rec = asRecordList(data && data.records);
+        const sch = (data && data.shiftSchedule && typeof data.shiftSchedule === 'object' && !Array.isArray(data.shiftSchedule)) ? data.shiftSchedule : {};
         return rec.length === 0 && Object.keys(sch).length === 0;
     }
 
@@ -891,13 +899,6 @@
         persistToCloud();
     }
 
-    function shiftNorms(shiftType) {
-        if (shiftType === 'evening') {
-            return { fc: settings.fcEve, pr: settings.prEve };
-        }
-        return { fc: settings.fcDay, pr: settings.prDay };
-    }
-
     function mixTotals(list) {
         let fc = 0;
         let pr = 0;
@@ -907,13 +908,6 @@
             else fc += q;
         });
         return { fc, pr, total: fc + pr };
-    }
-
-    function blendedQuota(shiftType, fcQty, prQty) {
-        const norms = shiftNorms(shiftType);
-        const total = fcQty + prQty;
-        if (total <= 0) return Math.round((norms.fc + norms.pr) / 2);
-        return Math.round((norms.fc * fcQty + norms.pr * prQty) / total);
     }
 
     document.getElementById('recordForm').addEventListener('submit', function(e) {
@@ -1046,24 +1040,18 @@
         let totalPlan = 0;
         let assignedShiftsCount = 0;
         const days = daysInCalendarMonth(year, month);
-        const monthRecords = records.filter(r => r.date && r.date.substring(0, 7) === `${year}-${String(month).padStart(2, '0')}`);
-        const monthMix = mixTotals(monthRecords);
 
         for (let day = 1; day <= days; day++) {
             const mm = String(month).padStart(2, '0');
             const dd = String(day).padStart(2, '0');
             const dateStr = `${year}-${mm}-${dd}`;
             const shift = shiftSchedule[dateStr];
-            if (shift !== 'day' && shift !== 'evening') continue;
-
-            assignedShiftsCount++;
-            const dayMix = mixTotals(records.filter(r => r.date === dateStr));
-            if (dayMix.total > 0) {
-                totalPlan += blendedQuota(shift, dayMix.fc, dayMix.pr);
-            } else if (monthMix.total > 0) {
-                totalPlan += blendedQuota(shift, monthMix.fc, monthMix.pr);
-            } else {
-                totalPlan += blendedQuota(shift, 0, 0);
+            if (shift === 'day') {
+                totalPlan += settings.fcDay;
+                assignedShiftsCount++;
+            } else if (shift === 'evening') {
+                totalPlan += settings.fcEve;
+                assignedShiftsCount++;
             }
         }
         return { totalPlan, assignedShiftsCount };
