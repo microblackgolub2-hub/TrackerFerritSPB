@@ -185,26 +185,15 @@
             font-weight: 600;
             color: var(--text-muted);
             background-color: #f8fafc;
-        }
-
-        .table-scroll-container {
-            max-height: 420px;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-        }
-
-        thead th {
             position: sticky;
             top: 0;
             z-index: 1;
-            background-color: #f8fafc;
         }
 
-        .data-hint {
-            margin-top: 10px;
-            font-size: 0.8rem;
-            color: var(--text-muted);
+        .table-scroll-container {
+            max-height: 340px;
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .badge {
@@ -227,6 +216,12 @@
             flex-wrap: wrap;
         }
 
+        .data-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
         .quick-btns {
             display: flex;
             gap: 8px;
@@ -247,7 +242,6 @@
             background: #cbd5e1;
         }
 
-        /* Модальные окна */
         .modal {
             display: none;
             position: fixed;
@@ -305,7 +299,17 @@
 
         .cal-day .day-num { font-size: 0.85rem; line-height: 1; }
         .cal-day .shift-lbl { font-size: 0.6rem; opacity: 0.9; line-height: 1; margin-top: 2px; }
-        .cal-day.empty { border: none; background: transparent; cursor: default; min-height: 56px; height: 56px; pointer-events: none; }
+        .cal-day.empty { border: none; background: transparent; cursor: default; min-height: 56px; height: 56px; }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 8px 0 12px;
+        }
+        .help-text ol {
+            margin: 6px 0 0;
+            padding-left: 18px;
+        }
     </style>
 </head>
 <body>
@@ -316,7 +320,6 @@
         <p style="color: var(--text-muted); margin: 0;">ФЦ и ПР: смешанные партии и точный учет</p>
     </header>
 
-    <!-- Панель управления нормами и календарем -->
     <div class="card" style="padding: 15px 20px; background: #eff6ff; border-color: #bfdbfe;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
@@ -325,7 +328,36 @@
             <div style="display: flex; gap: 8px;">
                 <button class="btn btn-secondary btn-sm" onclick="openCalendarModal()">📅 График смен</button>
                 <button class="btn btn-secondary btn-sm" onclick="toggleSettings()">⚙️ Нормы</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleCloudPanel()">☁️ Облако</button>
             </div>
+        </div>
+        <div id="cloudPanel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bfdbfe;">
+            <strong>Синхронизация между телефоном и компьютером</strong>
+            <div class="help-text">
+                Лучше облачная база, а не домашний сервер: с телефона на работе домашний ПК не виден.
+                Один раз создайте бесплатную базу Firebase и введите ниже тот же код на всех устройствах.
+                <ol>
+                    <li>Откройте <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a>, создайте проект.</li>
+                    <li>Build → Realtime Database → Create, регион Europe, правила из файла <code>firebase-rules.json</code>.</li>
+                    <li>Скопируйте URL базы (оканчивается на <code>firebasedatabase.app</code> или <code>firebaseio.com</code>).</li>
+                    <li>Придумайте код от 8 символов и введите его на каждом устройстве.</li>
+                    <li>Чтобы открывать с телефона, выложите этот <code>index.html</code> в интернет (например Netlify Drop) и откройте ту же ссылку на телефоне.</li>
+                </ol>
+            </div>
+            <div class="form-group">
+                <label for="cloudDbUrl">URL базы Firebase</label>
+                <input type="url" id="cloudDbUrl" placeholder="https://проект-default-rtdb.europe-west1.firebasedatabase.app">
+            </div>
+            <div class="form-group">
+                <label for="cloudCode">Код учёта (общий пароль)</label>
+                <input type="text" id="cloudCode" placeholder="Например ceh4uchet2026" maxlength="40" autocomplete="off">
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-sm" onclick="connectCloud()" style="width: auto;">Подключить облако</button>
+                <button class="btn btn-secondary btn-sm" onclick="generateCloudCode()">Новый код</button>
+                <button class="btn btn-secondary btn-sm" onclick="disconnectCloud()">Отключить</button>
+            </div>
+            <p class="help-text" id="cloudPanelStatus" style="margin-bottom: 0;"></p>
         </div>
         <div id="settingsPanel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #bfdbfe;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
@@ -352,7 +384,6 @@
         </div>
     </div>
 
-    <!-- Статистика месяца -->
     <div class="stats-grid">
         <div class="stat-card">
             <h3>План на месяц</h3>
@@ -363,15 +394,15 @@
             <h3>Сделано за месяц</h3>
             <div class="stat-value" id="monthTotal" style="color: var(--primary);">0 шт</div>
             <span style="font-size: 0.75rem; color: var(--text-muted);" id="monthPercent">0% от плана</span>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="monthSplit">ФЦ: 0 / ПР: 0</div>
         </div>
         <div class="stat-card">
-            <h3>Осталось сделать</h3>
+            <h3 id="monthLeftLabel">Осталось сделать</h3>
             <div class="stat-value" id="monthLeft" style="color: var(--warning);">0 шт</div>
             <span style="font-size: 0.75rem; color: var(--text-muted);" id="daysLeftInfo">0 смен до конца</span>
         </div>
     </div>
 
-    <!-- Форма добавления / редактирования -->
     <div class="card" id="formCard">
         <h2 id="formTitle" style="margin-top: 0; font-size: 1.2rem;">Добавить запись</h2>
         <form id="recordForm">
@@ -397,7 +428,7 @@
                 </div>
                 <div class="form-group">
                     <label for="mainNumber">Табельный номер (6 цифр)</label>
-                    <input type="text" id="mainNumber" placeholder="Напр: 664352" maxlength="6" required>
+                    <input type="text" id="mainNumber" placeholder="Напр: 664352" maxlength="6" inputmode="numeric" required>
                 </div>
                 <div class="form-group full-width">
                     <label for="subNumber">Второй номер (через слэш)</label>
@@ -420,15 +451,12 @@
         </form>
     </div>
 
-    <!-- Таблица записей и поиск -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
             <h2 style="margin: 0; font-size: 1.2rem;">История записей</h2>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="searchInput" placeholder="🔍 Поиск по номерам..." oninput="render()" style="padding: 6px 12px; font-size: 0.85rem; width: 180px;">
-                <select id="filterMonth" onchange="render()" style="padding: 6px; font-size: 0.85rem; width: auto;">
-                    <!-- Заполняется динамически -->
-                </select>
+                <select id="filterMonth" onchange="render()" style="padding: 6px; font-size: 0.85rem; width: auto;"></select>
                 <span id="recordCount" style="color: var(--text-muted); font-size: 0.875rem;"></span>
             </div>
         </div>
@@ -444,9 +472,7 @@
                         <th>Действия</th>
                     </tr>
                 </thead>
-                <tbody id="recordsList">
-                    <!-- Записи добавляются динамически -->
-                </tbody>
+                <tbody id="recordsList"></tbody>
             </table>
         </div>
 
@@ -455,13 +481,12 @@
             <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Импорт из файла</button>
             <input type="file" id="importFile" accept=".json,application/json" style="display: none;" onchange="importData(event)">
         </div>
-        <p class="data-hint">Данные хранятся только в этом браузере на этом компьютере. Регулярно делайте экспорт, чтобы не потерять учёт.</p>
+        <p class="data-hint" id="storageStatus">Проверяем, куда сохранять данные…</p>
     </div>
 </div>
 
-<!-- Модальное окно календаря для назначения смен -->
-<div id="calendarModal" class="modal" onclick="if (event.target === this) closeCalendarModal()">
-    <div class="modal-content">
+<div id="calendarModal" class="modal" onclick="closeCalendarModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="margin: 0; font-size: 1.1rem;">График смен месяца</h3>
             <button class="btn btn-secondary btn-sm" onclick="closeCalendarModal()">✕</button>
@@ -492,9 +517,8 @@
     </div>
 </div>
 
-<!-- Модальное окно выбора смены для конкретного дня -->
-<div id="shiftSelectModal" class="modal" onclick="if (event.target === this) closeShiftSelectModal()">
-    <div class="modal-content" style="max-width: 320px; text-align: center;">
+<div id="shiftSelectModal" class="modal" onclick="closeShiftSelectModal()">
+    <div class="modal-content" style="max-width: 320px; text-align: center;" onclick="event.stopPropagation()">
         <h3 id="selectedDateTitle" style="margin-top: 0; font-size: 1.1rem;">Выбор смены</h3>
         <p style="font-size: 0.85rem; color: var(--text-muted);">Какая смена была в этот день?</p>
 
@@ -513,26 +537,35 @@
     function loadJson(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
-            if (raw == null) return fallback;
-            const parsed = JSON.parse(raw);
-            return parsed == null ? fallback : parsed;
+            if (raw == null || raw === '') return fallback;
+            return JSON.parse(raw);
         } catch (err) {
             return fallback;
         }
     }
 
-    function persistAll() {
+    function saveJson(key, value) {
         try {
-            localStorage.setItem('production_records', JSON.stringify(records));
-            localStorage.setItem('production_settings', JSON.stringify(settings));
-            localStorage.setItem('production_shift_schedule', JSON.stringify(shiftSchedule));
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
         } catch (err) {
-            alert('Не удалось сохранить данные. Память браузера переполнена — сделайте экспорт.');
+            alert('Не удалось сохранить данные: память браузера переполнена. Сделайте экспорт и удалите лишние записи.');
+            return false;
         }
     }
 
+    function normalizeSettings(raw) {
+        const src = (raw && typeof raw === 'object') ? raw : {};
+        return {
+            fcDay: parseInt(src.fcDay, 10) || DEFAULT_SETTINGS.fcDay,
+            fcEve: parseInt(src.fcEve, 10) || DEFAULT_SETTINGS.fcEve,
+            prDay: parseInt(src.prDay, 10) || DEFAULT_SETTINGS.prDay,
+            prEve: parseInt(src.prEve, 10) || DEFAULT_SETTINGS.prEve
+        };
+    }
+
     function localISODate(d) {
-        const date = d || new Date();
+        const date = d instanceof Date ? d : new Date();
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -541,10 +574,6 @@
 
     function localYearMonth(d) {
         return localISODate(d).substring(0, 7);
-    }
-
-    function daysInMonth(year, month1to12) {
-        return new Date(year, month1to12, 0).getDate();
     }
 
     function escapeHtml(value) {
@@ -557,25 +586,32 @@
     }
 
     function newRecordId() {
-        if (window.crypto && typeof crypto.randomUUID === 'function') {
-            return crypto.randomUUID();
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
         }
-        return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 9);
+        return Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     }
 
-    function qtyOf(record) {
-        const n = Number(record && record.quantity);
-        return Number.isFinite(n) ? n : 0;
+    function sameId(a, b) {
+        return String(a) === String(b);
+    }
+
+    function daysInCalendarMonth(year, month1to12) {
+        return new Date(year, month1to12, 0).getDate();
     }
 
     let records = loadJson('production_records', []);
     if (!Array.isArray(records)) records = [];
-
-    let settings = Object.assign({}, DEFAULT_SETTINGS, loadJson('production_settings', {}));
+    let settings = normalizeSettings(loadJson('production_settings', DEFAULT_SETTINGS));
     let shiftSchedule = loadJson('production_shift_schedule', {});
     if (!shiftSchedule || typeof shiftSchedule !== 'object' || Array.isArray(shiftSchedule)) {
         shiftSchedule = {};
     }
+    const EMBEDDED_DB_URL = '';
+    let usingDisk = false;
+    let usingCloud = false;
+    let cloudPollTimer = null;
+    let savedAt = Number(loadJson('production_saved_at', 0)) || 0;
 
     let currentCalDate = new Date();
     let activeDateStrForModal = '';
@@ -595,9 +631,185 @@
     document.getElementById('date').value = localISODate();
 
     function addQty(val) {
-        const el = document.getElementById('quantity');
-        const current = parseInt(el.value, 10) || 0;
-        el.value = current + val;
+        const input = document.getElementById('quantity');
+        const current = parseInt(input.value, 10);
+        const base = Number.isFinite(current) ? current : 0;
+        input.value = base + val;
+    }
+
+    function toggleCloudPanel() {
+        const panel = document.getElementById('cloudPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        if (panel.style.display === 'block') fillCloudForm();
+    }
+
+    function fillCloudForm() {
+        const storedUrl = loadJson('production_cloud_url', '') || EMBEDDED_DB_URL;
+        const storedCode = loadJson('production_cloud_code', '') || '';
+        const fromQuery = new URLSearchParams(location.search).get('k');
+        document.getElementById('cloudDbUrl').value = storedUrl || '';
+        document.getElementById('cloudCode').value = fromQuery || storedCode || '';
+        if (EMBEDDED_DB_URL) {
+            document.getElementById('cloudDbUrl').readOnly = true;
+        }
+    }
+
+    function normalizeDbUrl(raw) {
+        let url = String(raw || '').trim().replace(/\/+$/, '');
+        url = url.replace(/\.json$/i, '');
+        return url;
+    }
+
+    function validCloudCode(code) {
+        return /^[a-zA-Z0-9_-]{8,40}$/.test(String(code || '').trim());
+    }
+
+    function cloudSettings() {
+        const dbUrl = normalizeDbUrl(loadJson('production_cloud_url', '') || EMBEDDED_DB_URL);
+        const code = String(loadJson('production_cloud_code', '') || new URLSearchParams(location.search).get('k') || '').trim();
+        return { dbUrl, code };
+    }
+
+    function isFirebaseDbUrl(url) {
+        return /^https:\/\/[a-z0-9.-]+\.(firebaseio\.com|firebasedatabase\.app)$/i.test(url);
+    }
+
+    function cloudEnabled() {
+        const { dbUrl, code } = cloudSettings();
+        return isFirebaseDbUrl(dbUrl) && validCloudCode(code);
+    }
+
+    function cloudEndpoint() {
+        const { dbUrl, code } = cloudSettings();
+        return dbUrl + '/spaces/' + encodeURIComponent(code) + '.json';
+    }
+
+    function generateCloudCode() {
+        const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+        let code = '';
+        for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        document.getElementById('cloudCode').value = code;
+    }
+
+    async function fetchCloud() {
+        const res = await fetch(cloudEndpoint(), { cache: 'no-store' });
+        if (res.status === 404) return null;
+        const text = await res.text();
+        if (!res.ok) {
+            throw new Error(text || ('HTTP ' + res.status));
+        }
+        if (!text || text === 'null') return null;
+        return JSON.parse(text);
+    }
+
+    async function putCloud(payload) {
+        const res = await fetch(cloudEndpoint(), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || ('HTTP ' + res.status));
+        }
+    }
+
+    function dataSnapshot() {
+        return { records, settings, shiftSchedule, savedAt };
+    }
+
+    async function syncFromCloud() {
+        if (!cloudEnabled()) {
+            usingCloud = false;
+            return;
+        }
+        const remote = await fetchCloud();
+        usingCloud = true;
+        if (!remote || diskLooksEmpty(remote)) {
+            savedAt = Date.now();
+            await putCloud(dataSnapshot());
+            saveJson('production_saved_at', savedAt);
+            return;
+        }
+        const remoteSaved = Number(remote.savedAt) || 0;
+        if (remoteSaved >= savedAt) {
+            applySnapshot(remote);
+            savedAt = remoteSaved;
+            saveJson('production_records', records);
+            saveJson('production_settings', settings);
+            saveJson('production_shift_schedule', shiftSchedule);
+            saveJson('production_saved_at', savedAt);
+        } else {
+            await putCloud(dataSnapshot());
+        }
+    }
+
+    async function persistToCloud() {
+        if (!cloudEnabled()) return;
+        try {
+            savedAt = Date.now();
+            saveJson('production_saved_at', savedAt);
+            await putCloud(dataSnapshot());
+            usingCloud = true;
+            updateStorageStatus();
+        } catch (err) {
+            usingCloud = false;
+            updateStorageStatus('Не удалось записать в облако. Данные остались на этом устройстве.');
+        }
+    }
+
+    async function connectCloud() {
+        const dbUrl = normalizeDbUrl(document.getElementById('cloudDbUrl').value);
+        const code = document.getElementById('cloudCode').value.trim();
+        const status = document.getElementById('cloudPanelStatus');
+        if (!isFirebaseDbUrl(dbUrl)) {
+            status.textContent = 'Вставьте URL базы Firebase (firebasedatabase.app или firebaseio.com)';
+            return;
+        }
+        if (!validCloudCode(code)) {
+            status.textContent = 'Код: 8–40 символов, только латиница, цифры, _ и -';
+            return;
+        }
+        saveJson('production_cloud_url', dbUrl);
+        saveJson('production_cloud_code', code);
+        status.textContent = 'Подключаем…';
+        try {
+            await syncFromCloud();
+            applySettingsToUi();
+            render();
+            startCloudPoll();
+            status.textContent = 'Облако подключено. Введите этот же URL и код на телефоне.';
+            updateStorageStatus();
+        } catch (err) {
+            usingCloud = false;
+            status.textContent = 'Нет доступа к базе. Проверьте URL и правила Firebase.';
+        }
+    }
+
+    function disconnectCloud() {
+        usingCloud = false;
+        saveJson('production_cloud_url', '');
+        saveJson('production_cloud_code', '');
+        if (cloudPollTimer) {
+            clearInterval(cloudPollTimer);
+            cloudPollTimer = null;
+        }
+        document.getElementById('cloudPanelStatus').textContent = 'Облако отключено. Данные снова только на этом устройстве.';
+        updateStorageStatus();
+    }
+
+    function startCloudPoll() {
+        if (cloudPollTimer) clearInterval(cloudPollTimer);
+        if (!cloudEnabled()) return;
+        cloudPollTimer = setInterval(async function() {
+            if (document.hidden || !cloudEnabled()) return;
+            try {
+                await syncFromCloud();
+                applySettingsToUi();
+                render();
+                updateStorageStatus();
+            } catch (err) {}
+        }, 20000);
     }
 
     function toggleSettings() {
@@ -605,50 +817,103 @@
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
-    function readNorm(id, fallback) {
-        const n = parseInt(document.getElementById(id).value, 10);
-        return Number.isFinite(n) && n >= 0 ? n : fallback;
-    }
-
     function saveSettings() {
-        settings.fcDay = readNorm('inputFcDay', DEFAULT_SETTINGS.fcDay);
-        settings.fcEve = readNorm('inputFcEve', DEFAULT_SETTINGS.fcEve);
-        settings.prDay = readNorm('inputPrDay', DEFAULT_SETTINGS.prDay);
-        settings.prEve = readNorm('inputPrEve', DEFAULT_SETTINGS.prEve);
-        persistAll();
+        settings = normalizeSettings({
+            fcDay: document.getElementById('inputFcDay').value,
+            fcEve: document.getElementById('inputFcEve').value,
+            prDay: document.getElementById('inputPrDay').value,
+            prEve: document.getElementById('inputPrEve').value
+        });
+        saveJson('production_settings', settings);
         applySettingsToUi();
         toggleSettings();
+        saveAll();
         render();
     }
 
-    function normForShift(shift, partType) {
-        if (partType === 'pr') {
-            return shift === 'evening' ? settings.prEve : settings.prDay;
-        }
-        return shift === 'evening' ? settings.fcEve : settings.fcDay;
+    function applySnapshot(data) {
+        records = Array.isArray(data.records) ? data.records : [];
+        settings = normalizeSettings(data.settings);
+        const schedule = data.shiftSchedule;
+        shiftSchedule = (schedule && typeof schedule === 'object' && !Array.isArray(schedule)) ? schedule : {};
+        if (data && data.savedAt) savedAt = Number(data.savedAt) || savedAt;
     }
 
-    function planForDate(dateStr) {
-        const shift = shiftSchedule[dateStr];
-        if (shift !== 'day' && shift !== 'evening') return 0;
+    function hasLocalData() {
+        return records.length > 0 || Object.keys(shiftSchedule).length > 0;
+    }
 
-        const dayRecords = records.filter(r => r.date === dateStr);
-        let fcQty = 0;
-        let prQty = 0;
-        dayRecords.forEach(r => {
-            if (r.partType === 'pr') prQty += qtyOf(r);
-            else fcQty += qtyOf(r);
-        });
+    function diskLooksEmpty(data) {
+        const rec = Array.isArray(data && data.records) ? data.records : [];
+        const sch = (data && data.shiftSchedule && typeof data.shiftSchedule === 'object') ? data.shiftSchedule : {};
+        return rec.length === 0 && Object.keys(sch).length === 0;
+    }
 
-        const total = fcQty + prQty;
-        if (total === 0) {
-            return normForShift(shift, 'fc');
+    function updateStorageStatus(extra) {
+        const el = document.getElementById('storageStatus');
+        if (!el) return;
+        if (extra) {
+            el.textContent = extra;
+            el.style.color = usingCloud ? 'var(--success)' : 'var(--text-muted)';
+            return;
         }
-        if (prQty === 0) return normForShift(shift, 'fc');
-        if (fcQty === 0) return normForShift(shift, 'pr');
+        if (usingCloud) {
+            el.textContent = 'Данные в облаке Firebase. Тот же URL и код — на телефоне и дома. Копия также в этом браузере.';
+            el.style.color = 'var(--success)';
+        } else if (usingDisk) {
+            el.textContent = 'Данные пишутся в файл data.json в папке программы и дублируются в браузере.';
+            el.style.color = 'var(--success)';
+        } else {
+            el.textContent = 'Сейчас данные только в этом браузере. Для телефона нажмите «Облако» и подключите Firebase.';
+            el.style.color = 'var(--text-muted)';
+        }
+    }
 
-        const mixed = (fcQty / total) * normForShift(shift, 'fc') + (prQty / total) * normForShift(shift, 'pr');
-        return Math.round(mixed);
+    function persistToDisk() {
+        if (!usingDisk) return Promise.resolve();
+        return fetch('/api/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(dataSnapshot())
+        }).then(function(res) {
+            if (!res.ok) throw new Error('disk');
+            updateStorageStatus();
+        }).catch(function() {
+            updateStorageStatus('Не удалось записать data.json. Данные пока остались в браузере.');
+        });
+    }
+
+    function saveAll() {
+        saveJson('production_records', records);
+        saveJson('production_settings', settings);
+        saveJson('production_shift_schedule', shiftSchedule);
+        persistToDisk();
+        persistToCloud();
+    }
+
+    function shiftNorms(shiftType) {
+        if (shiftType === 'evening') {
+            return { fc: settings.fcEve, pr: settings.prEve };
+        }
+        return { fc: settings.fcDay, pr: settings.prDay };
+    }
+
+    function mixTotals(list) {
+        let fc = 0;
+        let pr = 0;
+        list.forEach(r => {
+            const q = Number(r.quantity) || 0;
+            if (r.partType === 'pr') pr += q;
+            else fc += q;
+        });
+        return { fc, pr, total: fc + pr };
+    }
+
+    function blendedQuota(shiftType, fcQty, prQty) {
+        const norms = shiftNorms(shiftType);
+        const total = fcQty + prQty;
+        if (total <= 0) return Math.round((norms.fc + norms.pr) / 2);
+        return Math.round((norms.fc * fcQty + norms.pr * prQty) / total);
     }
 
     document.getElementById('recordForm').addEventListener('submit', function(e) {
@@ -666,14 +931,13 @@
             alert('Табельный номер должен состоять ровно из 6 цифр!');
             return;
         }
-
         if (!Number.isFinite(quantity) || quantity < 1) {
-            alert('Укажите количество больше 0.');
+            alert('Укажите количество деталей — целое число не меньше 1.');
             return;
         }
 
         if (editId) {
-            const index = records.findIndex(r => String(r.id) === String(editId));
+            const index = records.findIndex(r => sameId(r.id, editId));
             if (index !== -1) {
                 records[index] = {
                     ...records[index],
@@ -698,15 +962,16 @@
             });
             document.getElementById('mainNumber').value = '';
             document.getElementById('subNumber').value = '';
+            document.getElementById('quantity').value = '';
         }
 
         shiftSchedule[date] = shiftType;
-        persistAll();
+        saveAll();
         render();
     });
 
     function editRecord(id) {
-        const record = records.find(r => String(r.id) === String(id));
+        const record = records.find(r => sameId(r.id, id));
         if (!record) return;
 
         document.getElementById('editRecordId').value = record.id;
@@ -740,8 +1005,8 @@
 
     function deleteRecord(id) {
         if (confirm('Удалить эту запись?')) {
-            records = records.filter(r => String(r.id) !== String(id));
-            persistAll();
+            records = records.filter(r => !sameId(r.id, id));
+            saveAll();
             render();
         }
     }
@@ -780,14 +1045,25 @@
     function getMonthPlanData(year, month) {
         let totalPlan = 0;
         let assignedShiftsCount = 0;
-        const totalDays = daysInMonth(year, month);
+        const days = daysInCalendarMonth(year, month);
+        const monthRecords = records.filter(r => r.date && r.date.substring(0, 7) === `${year}-${String(month).padStart(2, '0')}`);
+        const monthMix = mixTotals(monthRecords);
 
-        for (let day = 1; day <= totalDays; day++) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        for (let day = 1; day <= days; day++) {
+            const mm = String(month).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
             const shift = shiftSchedule[dateStr];
-            if (shift === 'day' || shift === 'evening') {
-                totalPlan += planForDate(dateStr);
-                assignedShiftsCount++;
+            if (shift !== 'day' && shift !== 'evening') continue;
+
+            assignedShiftsCount++;
+            const dayMix = mixTotals(records.filter(r => r.date === dateStr));
+            if (dayMix.total > 0) {
+                totalPlan += blendedQuota(shift, dayMix.fc, dayMix.pr);
+            } else if (monthMix.total > 0) {
+                totalPlan += blendedQuota(shift, monthMix.fc, monthMix.pr);
+            } else {
+                totalPlan += blendedQuota(shift, 0, 0);
             }
         }
         return { totalPlan, assignedShiftsCount };
@@ -823,7 +1099,7 @@
 
         const jsDay = new Date(year, month, 1).getDay();
         const firstDayIndex = (jsDay === 0) ? 6 : jsDay - 1;
-        const totalDays = new Date(year, month + 1, 0).getDate();
+        const days = new Date(year, month + 1, 0).getDate();
 
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyCell = document.createElement('div');
@@ -831,7 +1107,7 @@
             grid.appendChild(emptyCell);
         }
 
-        for (let day = 1; day <= totalDays; day++) {
+        for (let day = 1; day <= days; day++) {
             const mm = String(month + 1).padStart(2, '0');
             const dd = String(day).padStart(2, '0');
             const dateStr = `${year}-${mm}-${dd}`;
@@ -870,37 +1146,37 @@
         } else {
             shiftSchedule[activeDateStrForModal] = type;
         }
-        persistAll();
+        saveAll();
         closeShiftSelectModal();
         renderCalendarModal();
         render();
     }
 
     function fillWeekShifts() {
-        if (!confirm('Заполнить пн–пт сменами по календарным неделям и снять смены с сб/вс? Уже отмеченные дни этого месяца будут перезаписаны.')) {
-            return;
-        }
+        const ok = confirm('Заполнить пн–пт неделя через неделю (день / вечер) и снять смены с суббот и воскресений? График этого месяца будет заменён.');
+        if (!ok) return;
 
         const year = currentCalDate.getFullYear();
         const month = currentCalDate.getMonth();
-        const totalDays = new Date(year, month + 1, 0).getDate();
-        const jsDay = new Date(year, month, 1).getDay();
-        const firstDayIndex = (jsDay === 0) ? 6 : jsDay - 1;
+        const days = new Date(year, month + 1, 0).getDate();
+        const firstJsDay = new Date(year, month, 1).getDay();
+        const firstMondayIndex = (firstJsDay === 0) ? 6 : firstJsDay - 1;
 
-        for (let day = 1; day <= totalDays; day++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const dObj = new Date(year, month, day);
-            const dow = dObj.getDay();
+        for (let day = 1; day <= days; day++) {
+            const mm = String(month + 1).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mm}-${dd}`;
+            const weekDay = new Date(year, month, day).getDay();
 
-            if (dow === 0 || dow === 6) {
+            if (weekDay === 0 || weekDay === 6) {
                 delete shiftSchedule[dateStr];
                 continue;
             }
 
-            const weekRow = Math.floor((firstDayIndex + day - 1) / 7);
-            shiftSchedule[dateStr] = weekRow % 2 === 0 ? 'day' : 'evening';
+            const mondayWeek = Math.floor((day - 1 + firstMondayIndex) / 7);
+            shiftSchedule[dateStr] = mondayWeek % 2 === 0 ? 'day' : 'evening';
         }
-        persistAll();
+        saveAll();
         renderCalendarModal();
         render();
     }
@@ -917,16 +1193,11 @@
         const planData = getMonthPlanData(selYear, selMonth);
         const monthPlan = planData.totalPlan;
         const workingDaysCount = planData.assignedShiftsCount;
+        const monthRecords = records.filter(r => r.date && r.date.substring(0, 7) === selectedYM);
+        const monthMix = mixTotals(monthRecords);
+        const monthTotal = monthMix.total;
 
-        let monthTotal = 0;
-        records.forEach(r => {
-            const rYM = r.date ? r.date.substring(0, 7) : '';
-            if (rYM === selectedYM) monthTotal += qtyOf(r);
-        });
-
-        const filteredRecords = records.filter(r => {
-            const matchesMonth = r.date && r.date.substring(0, 7) === selectedYM;
-            if (!matchesMonth) return false;
+        const filteredRecords = monthRecords.filter(r => {
             if (!searchQuery) return true;
             const mainMatch = String(r.mainNumber || '').toLowerCase().includes(searchQuery);
             const subMatch = String(r.subNumber || '').toLowerCase().includes(searchQuery);
@@ -937,65 +1208,77 @@
             const tr = document.createElement('tr');
             const partName = (r.partType === 'pr') ? 'ПР' : 'ФЦ';
             const partBadgeClass = (r.partType === 'pr') ? 'badge-pr' : 'badge-fc';
-            const safeDate = escapeHtml((r.date || '').split('-').reverse().join('.'));
+            const dateLabel = r.date ? r.date.split('-').reverse().join('.') : '';
             const shiftBadge = r.shiftType === 'day'
                 ? '<span class="badge badge-day">День</span>'
                 : '<span class="badge badge-evening">Вечер</span>';
-            const safeId = escapeHtml(r.id);
+            const safeId = encodeURIComponent(String(r.id));
 
             tr.innerHTML = `
                 <td>
-                    <strong>${safeDate}</strong>
+                    <strong>${escapeHtml(dateLabel)}</strong>
                     <div style="margin-top: 3px; display: flex; gap: 4px; align-items: center;">
                         <span class="badge ${partBadgeClass}">${partName}</span> ${shiftBadge}
                     </div>
                 </td>
                 <td><code>${escapeHtml(r.mainNumber)}</code></td>
                 <td><code>${escapeHtml(r.subNumber)}</code></td>
-                <td><strong>+${qtyOf(r)} шт</strong></td>
+                <td><strong>+${escapeHtml(r.quantity)} шт</strong></td>
                 <td>
                     <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-warning btn-sm" style="padding: 6px 10px;" onclick="editRecord('${safeId}')">Изменить</button>
-                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px;" onclick="deleteRecord('${safeId}')">Удалить</button>
+                        <button class="btn btn-warning btn-sm" style="padding: 6px 10px;" data-action="edit" data-id="${safeId}">Изменить</button>
+                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px;" data-action="delete" data-id="${safeId}">Удалить</button>
                     </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
 
+        tbody.onclick = function(ev) {
+            const btn = ev.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = decodeURIComponent(btn.getAttribute('data-id') || '');
+            if (btn.getAttribute('data-action') === 'edit') editRecord(id);
+            if (btn.getAttribute('data-action') === 'delete') deleteRecord(id);
+        };
+
         document.getElementById('monthTotal').innerText = monthTotal + ' шт';
         document.getElementById('monthPlan').innerText = monthPlan + ' шт';
         document.getElementById('planDaysInfo').innerText = `${workingDaysCount} смен назначено`;
+        document.getElementById('monthSplit').innerText = `ФЦ: ${monthMix.fc} / ПР: ${monthMix.pr}`;
 
         const monthPercent = monthPlan > 0 ? Math.round((monthTotal / monthPlan) * 100) : 0;
         const monthPercentElem = document.getElementById('monthPercent');
         monthPercentElem.innerText = monthPercent + '% от плана';
         monthPercentElem.style.color = monthPercent >= 100 ? 'var(--success)' : 'var(--text-muted)';
 
+        const monthDiff = monthPlan - monthTotal;
         const monthLeftElem = document.getElementById('monthLeft');
-        const leftover = monthPlan - monthTotal;
-        if (leftover > 0) {
-            monthLeftElem.innerText = leftover + ' шт';
+        const monthLeftLabel = document.getElementById('monthLeftLabel');
+        if (monthDiff >= 0) {
+            monthLeftLabel.innerText = 'Осталось сделать';
+            monthLeftElem.innerText = monthDiff + ' шт';
             monthLeftElem.style.color = 'var(--warning)';
-        } else if (leftover < 0) {
-            monthLeftElem.innerText = '+' + Math.abs(leftover) + ' шт сверх плана';
-            monthLeftElem.style.color = 'var(--success)';
         } else {
-            monthLeftElem.innerText = '0 шт';
-            monthLeftElem.style.color = monthPlan > 0 ? 'var(--success)' : 'var(--warning)';
+            monthLeftLabel.innerText = 'Сверх плана';
+            monthLeftElem.innerText = '+' + Math.abs(monthDiff) + ' шт';
+            monthLeftElem.style.color = 'var(--success)';
         }
 
         let daysLeft = 0;
         let leftDayShifts = 0;
         let leftEveningShifts = 0;
         const now = new Date();
-        const isCurrentMonth = (selYear === now.getFullYear() && selMonth === (now.getMonth() + 1));
         const todayStr = localISODate(now);
+        const isCurrentMonth = (selYear === now.getFullYear() && selMonth === (now.getMonth() + 1));
+        const monthHasShifts = workingDaysCount > 0;
 
         if (isCurrentMonth) {
-            const totalDays = daysInMonth(selYear, selMonth);
-            for (let d = now.getDate(); d <= totalDays; d++) {
-                const dateStr = `${selYear}-${String(selMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const totalDaysInMonth = daysInCalendarMonth(selYear, selMonth);
+            for (let d = now.getDate(); d <= totalDaysInMonth; d++) {
+                const mm = String(selMonth).padStart(2, '0');
+                const dd = String(d).padStart(2, '0');
+                const dateStr = `${selYear}-${mm}-${dd}`;
                 const shift = shiftSchedule[dateStr];
                 if (shift !== 'day' && shift !== 'evening') continue;
                 if (dateStr === todayStr && records.some(r => r.date === todayStr)) continue;
@@ -1005,22 +1288,25 @@
             }
         }
 
-        const daysLeftInfo = document.getElementById('daysLeftInfo');
         if (!isCurrentMonth) {
-            daysLeftInfo.innerText = 'Архивный месяц';
-        } else if (workingDaysCount === 0) {
-            daysLeftInfo.innerText = 'Смены не назначены';
+            document.getElementById('daysLeftInfo').innerText = 'Архивный месяц';
+        } else if (!monthHasShifts) {
+            document.getElementById('daysLeftInfo').innerText = 'Смены не назначены';
         } else if (daysLeft > 0) {
-            daysLeftInfo.innerText = `Осталось смен: ${daysLeft} (${leftDayShifts} д, ${leftEveningShifts} в)`;
+            document.getElementById('daysLeftInfo').innerText = `Осталось смен: ${daysLeft} (${leftDayShifts} д, ${leftEveningShifts} в)`;
         } else {
-            daysLeftInfo.innerText = 'Месяц завершен';
+            document.getElementById('daysLeftInfo').innerText = 'Месяц завершен';
         }
 
         document.getElementById('recordCount').innerText = `Всего записей: ${filteredRecords.length}`;
     }
 
     function exportData() {
-        const backupData = { records, settings, shiftSchedule };
+        const backupData = {
+            records,
+            settings,
+            shiftSchedule
+        };
         const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute('href', dataStr);
@@ -1032,46 +1318,88 @@
 
     function importData(event) {
         const file = event.target.files[0];
+        event.target.value = '';
         if (!file) return;
+
+        if (!confirm('Импорт заменит текущие записи, нормы и график смен. Продолжить?')) return;
 
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const imported = JSON.parse(e.target.result);
-                if (!confirm('Заменить текущие записи, нормы и график данными из файла? Это нельзя отменить, кроме как импортом старого бэкапа.')) {
-                    event.target.value = '';
-                    return;
-                }
-
                 if (Array.isArray(imported)) {
                     records = imported;
                 } else if (imported && Array.isArray(imported.records)) {
                     records = imported.records;
-                    if (imported.settings && typeof imported.settings === 'object') {
-                        settings = Object.assign({}, DEFAULT_SETTINGS, imported.settings);
-                    }
+                    if (imported.settings) settings = normalizeSettings(imported.settings);
                     if (imported.shiftSchedule && typeof imported.shiftSchedule === 'object') {
                         shiftSchedule = imported.shiftSchedule;
                     }
                 } else {
                     alert('В файле нет записей учёта.');
-                    event.target.value = '';
                     return;
                 }
-
-                persistAll();
                 applySettingsToUi();
+                saveAll();
                 render();
                 alert('Данные успешно загружены!');
             } catch (err) {
                 alert('Ошибка при чтении файла.');
             }
-            event.target.value = '';
         };
         reader.readAsText(file);
     }
 
-    render();
+    async function initStorage() {
+        const queryCode = new URLSearchParams(location.search).get('k');
+        if (validCloudCode(queryCode) && !loadJson('production_cloud_code', '')) {
+            saveJson('production_cloud_code', queryCode);
+        }
+        fillCloudForm();
+
+        try {
+            const res = await fetch('/api/data', { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                usingDisk = true;
+                if (diskLooksEmpty(data) && hasLocalData()) {
+                    await persistToDisk();
+                } else {
+                    applySnapshot(data);
+                    saveJson('production_records', records);
+                    saveJson('production_settings', settings);
+                    saveJson('production_shift_schedule', shiftSchedule);
+                }
+            }
+        } catch (err) {
+            usingDisk = false;
+        }
+
+        if (cloudEnabled()) {
+            try {
+                await syncFromCloud();
+                startCloudPoll();
+            } catch (err) {
+                usingCloud = false;
+            }
+        }
+
+        applySettingsToUi();
+        updateStorageStatus();
+        render();
+    }
+
+    document.addEventListener('visibilitychange', async function() {
+        if (document.hidden || !cloudEnabled()) return;
+        try {
+            await syncFromCloud();
+            applySettingsToUi();
+            render();
+            updateStorageStatus();
+        } catch (err) {}
+    });
+
+    initStorage();
 </script>
 
 </body>
